@@ -66,13 +66,19 @@ fun LoginScreen(navController: NavHostController) {
                 }
 
                 isLoading = true
-                authenticateUser(username, password, onSuccess = {
-                    isLoading = false
-                    navController.navigate("courses")
-                }, onError = { errorMessage ->
-                    isLoading = false
-                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
-                })
+                authenticateUser(
+                    username = username,
+                    password = password,
+                    onSuccess = { message ->
+                        isLoading = false
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        navController.navigate("courses")
+                    },
+                    onError = { errorMessage ->
+                        isLoading = false
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                    }
+                )
             },
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth()
@@ -89,40 +95,51 @@ fun LoginScreen(navController: NavHostController) {
 private fun authenticateUser(
     username: String,
     password: String,
-    onSuccess: () -> Unit,
+    onSuccess: (String) -> Unit,
     onError: (String) -> Unit
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            // Adres serwera - zmień na odpowiedni IP swojego serwera
             val serverUrl = "http://10.0.2.2:8080/login" // 10.0.2.2 to localhost w emulatorze
 
-            val loginRequest = JSONObject().apply {
-                put("username", username)
-                put("password", password)
-            }
+            // Przygotowanie danych JSON zgodnie z formatem oczekiwanym przez serwer
+            val requestBody = """
+                {
+                    "username": "$username",
+                    "password": "$password"
+                }
+            """.trimIndent()
 
             val url = URL(serverUrl)
             val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.doOutput = true
-
-            // Wysłanie danych
-            connection.outputStream.use { outputStream ->
-                outputStream.write(loginRequest.toString().toByteArray())
+            connection.apply {
+                requestMethod = "POST"
+                setRequestProperty("Content-Type", "application/json")
+                doOutput = true
+                connectTimeout = 5000
+                readTimeout = 5000
             }
 
-            // Sprawdzenie odpowiedzi
-            when (connection.responseCode) {
-                HttpURLConnection.HTTP_OK -> {
-                    // Odczytanie odpowiedzi
-                    val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    val responseJson = JSONObject(response)
+            // Wysłanie danych
+            connection.outputStream.use { os ->
+                os.write(requestBody.toByteArray())
+                os.flush()
+            }
 
+            // Obsługa odpowiedzi
+            val responseCode = connection.responseCode
+            val response = if (responseCode in 200..299) {
+                connection.inputStream.bufferedReader().use { it.readText() }
+            } else {
+                connection.errorStream.bufferedReader().use { it.readText() }
+            }
+
+            when (responseCode) {
+                HttpURLConnection.HTTP_OK -> {
+                    val responseJson = JSONObject(response)
                     if (responseJson.getBoolean("success")) {
                         withContext(Dispatchers.Main) {
-                            onSuccess()
+                            onSuccess(responseJson.getString("message"))
                         }
                     } else {
                         withContext(Dispatchers.Main) {
@@ -130,22 +147,21 @@ private fun authenticateUser(
                         }
                     }
                 }
-                HttpURLConnection.HTTP_UNAUTHORIZED -> {
-                    val errorResponse = connection.errorStream.bufferedReader().use { it.readText() }
-                    val errorJson = JSONObject(errorResponse)
-                    withContext(Dispatchers.Main) {
-                        onError(errorJson.getString("error"))
-                    }
-                }
                 else -> {
                     withContext(Dispatchers.Main) {
-                        onError("Błąd serwera: ${connection.responseCode}")
+                        try {
+                            val errorJson = JSONObject(response)
+                            onError(errorJson.getString("message")
+                                ?: "Nieznany błąd: $responseCode")
+                        } catch (e: Exception) {
+                            onError("Błąd serwera: $responseCode")
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                onError("Błąd połączenia: ${e.localizedMessage}")
+                onError("Błąd połączenia: ${e.message ?: "Nieznany błąd"}")
             }
         }
     }
