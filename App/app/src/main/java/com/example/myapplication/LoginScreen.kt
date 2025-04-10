@@ -100,7 +100,7 @@ private fun authenticateUser(
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val serverUrl = "http://10.0.2.2:8080/login" // 10.0.2.2 to localhost w emulatorze
+            val serverUrl = "http://10.0.2.2:8080/api/auth/login" // 10.0.2.2 to localhost w emulatorze
 
             // Przygotowanie danych JSON zgodnie z formatem oczekiwanym przez serwer
             val requestBody = """
