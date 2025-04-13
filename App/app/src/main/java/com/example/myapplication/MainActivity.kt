@@ -10,7 +10,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.myapplication.ui.LoginScreen
 import com.example.myapplication.ui.CourseListScreen
-import com.example.myapplication.ui.CourseDetailScreen
+//import com.example.myapplication.ui.CourseDetailScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -34,7 +34,7 @@ fun EduApp() {
         composable("courses") { CourseListScreen(navController) }
         composable("course/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")
-            CourseDetailScreen(courseId ?: "Brak ID")
+            //CourseDetailScreen(courseId ?: "Brak ID")
         }
     }
 }
