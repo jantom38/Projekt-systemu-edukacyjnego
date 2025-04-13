@@ -13,26 +13,32 @@ import java.util.HashMap;
 @RequestMapping("/api/auth")
 public class AuthController {
 
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder; // Dodaj to pole
+
+    // Wstrzyknij zależności przez konstruktor
     @Autowired
-    private UserRepository userRepository;
-    private PasswordEncoder passwordEncoder;
+    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder; // Inicjalizacja
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         return userRepository.findByUsername(loginRequest.getUsername())
                 .map(user -> {
                     if (passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-                        Map<String, Object> response = new HashMap<>();
-                        response.put("success", true);
-                        response.put("message", "Login successful!");
-                        response.put("role", user.getRole().name());
-                        return ResponseEntity.ok(response);
+                        return ResponseEntity.ok(Map.of(
+                                "success", true,
+                                "message", "Login successful!",
+                                "role", user.getRole().name()
+                        ));
                     } else {
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        return ResponseEntity.status(401)
                                 .body(Map.of("success", false, "message", "Invalid credentials"));
                     }
                 })
-                .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .orElse(ResponseEntity.status(401)
                         .body(Map.of("success", false, "message", "User not found")));
     }
 }

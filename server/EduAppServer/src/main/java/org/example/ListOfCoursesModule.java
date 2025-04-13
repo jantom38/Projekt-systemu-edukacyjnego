@@ -2,12 +2,12 @@ package org.example;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 import java.util.ArrayList;
 import java.util.List;
-//@RestController
-//@RequestMapping("/api/courses")
-// W Twoim ListOfCoursesModule.java
+
 @RestController
 @RequestMapping("/api/courses")
 public class ListOfCoursesModule {
@@ -16,7 +16,8 @@ public class ListOfCoursesModule {
     private CourseRepository courseRepository;
 
     @GetMapping
-    public List<Course> getAllCourses() {
+    public List<Course> getAllCourses(Authentication authentication) {
+       // System.out.println("User roles: " + authentication.getAuthorities()); // Debug ról
         return courseRepository.findAll();
     }
 }
