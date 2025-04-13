@@ -19,6 +19,6 @@ public class Course {
     public void setCourseName(String courseName) { this.courseName = courseName; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public String getAccessKey() { return accessKey; } // POPRAWIONE (było return Description)
-    public void setAccessKey(String accessKey) { this.accessKey = accessKey; } // POPRAWIONE (było this.AccessKey = AccessKey)
+    public String getAccessKey() { return accessKey; }
+    public void setAccessKey(String accessKey) { this.accessKey = accessKey; }
 }

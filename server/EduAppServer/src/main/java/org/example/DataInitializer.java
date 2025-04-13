@@ -2,34 +2,46 @@ package org.example;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DataInitializer {
-
-    @Autowired
+@Autowired
     private UserRepository userRepository;
-
-    @Autowired
+@Autowired
     private CourseRepository courseRepository;
+@Autowired
+    private PasswordEncoder passwordEncoder;
+
+
 
     @PostConstruct
-    public void init() {
+    public  void init() {
         initUsers();
         initCourses();
     }
 
     private void initUsers() {
         if (userRepository.findByUsername("admin").isEmpty()) {
-            User user = new User();
-            user.setUsername("admin");
-            user.setPassword("password123");
-            userRepository.save(user);
+            User admin = new User();
+            admin.setUsername("admin");
+            admin.setPassword(passwordEncoder.encode("password123"));
+            admin.setRole(UserRole.ADMIN);
+            userRepository.save(admin);
+        }
+
+        if (userRepository.findByUsername("teacher").isEmpty()) {
+            User teacher = new User();
+            teacher.setUsername("teacher");
+            teacher.setPassword(passwordEncoder.encode("teacher123")); // Tutaj też użyj passwordEncoder!
+            teacher.setRole(UserRole.TEACHER);
+            userRepository.save(teacher);
         }
     }
 
     private void initCourses() {
-        if (courseRepository.count() == 0) { // Dodajemy kursy tylko jeśli tabela jest pusta
+        if (courseRepository.count() == 0) {
             Course course1 = new Course();
             course1.setCourseName("Java Basics");
             course1.setDescription("Introduction to Java programming");
