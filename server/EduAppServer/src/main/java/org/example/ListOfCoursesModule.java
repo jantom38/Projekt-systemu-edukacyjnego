@@ -16,7 +16,7 @@ public class ListOfCoursesModule {
     private CourseRepository courseRepository;
 
     @GetMapping
-    public List<Course> getAllCourses(Authentication authentication) {
+    public List<Course> getAllCourses() {
        // System.out.println("User roles: " + authentication.getAuthorities()); // Debug ról
         return courseRepository.findAll();
     }

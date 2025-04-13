@@ -18,7 +18,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()  // Zezwól na logowanie
-                        .requestMatchers("/api/courses").hasAnyRole("ADMIN", "TEACHER", "STUDENT")
+                        .requestMatchers("/api/courses").permitAll()
 
                 )
                 .httpBasic(basic -> {});  // Pozostaw Basic Auth dla innych endpointów
