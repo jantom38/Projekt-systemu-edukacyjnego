@@ -12,6 +12,7 @@ public class User {
     private String username;
     private String password;
     private int courseId;
+    private int role;
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL)
 
     // Gettery i settery
