@@ -20,6 +20,7 @@ dependencies {
     // Spring Security - konieczne dla autentykacji i autoryzacji
     implementation("org.springframework.boot:spring-boot-starter-security")
 
+
     // Baza danych
     implementation("org.xerial:sqlite-jdbc:3.41.2.2")
     implementation("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
@@ -27,7 +28,7 @@ dependencies {
     // Dodatkowe przydatne zależności
     implementation("com.fasterxml.jackson.core:jackson-databind") // dla lepszej obsługi JSON
     implementation("jakarta.validation:jakarta.validation-api") // walidacja danych
-
+    implementation ("com.auth0:java-jwt:4.4.0")
     // (opcjonalnie) Lombok - upraszcza boilerplate code
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

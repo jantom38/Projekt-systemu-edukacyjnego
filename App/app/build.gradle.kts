@@ -63,8 +63,10 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
+
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
+
 
     // Networking
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

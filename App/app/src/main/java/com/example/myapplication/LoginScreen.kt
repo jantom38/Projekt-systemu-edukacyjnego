@@ -1,5 +1,6 @@
 package com.example.myapplication.ui
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -67,6 +68,7 @@ fun LoginScreen(navController: NavHostController) {
 
                 isLoading = true
                 authenticateUser(
+                    context = context,
                     username = username,
                     password = password,
                     onSuccess = { message ->
@@ -93,25 +95,25 @@ fun LoginScreen(navController: NavHostController) {
 }
 
 private fun authenticateUser(
+    context: Context,
     username: String,
     password: String,
     onSuccess: (String) -> Unit,
     onError: (String) -> Unit
 ) {
     CoroutineScope(Dispatchers.IO).launch {
+        var connection: HttpURLConnection? = null
         try {
-            val serverUrl = "http://10.0.2.2:8080/api/auth/login" // 10.0.2.2 to localhost w emulatorze
+            val serverUrl = "http://10.0.2.2:8080/api/auth/login"
 
-            // Przygotowanie danych JSON zgodnie z formatem oczekiwanym przez serwer
-            val requestBody = """
-                {
-                    "username": "$username",
-                    "password": "$password"
-                }
-            """.trimIndent()
+            // Tworzenie JSON-a za pomocą JSONObject
+            val jsonPayload = JSONObject().apply {
+                put("username", username)
+                put("password", password)
+            }.toString()
 
             val url = URL(serverUrl)
-            val connection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
             connection.apply {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json")
@@ -122,7 +124,7 @@ private fun authenticateUser(
 
             // Wysłanie danych
             connection.outputStream.use { os ->
-                os.write(requestBody.toByteArray())
+                os.write(jsonPayload.toByteArray(Charsets.UTF_8))
                 os.flush()
             }
 
@@ -131,13 +133,16 @@ private fun authenticateUser(
             val response = if (responseCode in 200..299) {
                 connection.inputStream.bufferedReader().use { it.readText() }
             } else {
-                connection.errorStream.bufferedReader().use { it.readText() }
+                connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
             }
 
             when (responseCode) {
                 HttpURLConnection.HTTP_OK -> {
                     val responseJson = JSONObject(response)
                     if (responseJson.getBoolean("success")) {
+                        // Zapisanie tokenu JWT
+                        val token = responseJson.getString("token")
+                        saveToken(context, token)
                         withContext(Dispatchers.Main) {
                             onSuccess(responseJson.getString("message"))
                         }
@@ -151,8 +156,7 @@ private fun authenticateUser(
                     withContext(Dispatchers.Main) {
                         try {
                             val errorJson = JSONObject(response)
-                            onError(errorJson.getString("message")
-                                ?: "Nieznany błąd: $responseCode")
+                            onError(errorJson.getString("message") ?: "Błąd serwera: $responseCode")
                         } catch (e: Exception) {
                             onError("Błąd serwera: $responseCode")
                         }
@@ -163,6 +167,14 @@ private fun authenticateUser(
             withContext(Dispatchers.Main) {
                 onError("Błąd połączenia: ${e.message ?: "Nieznany błąd"}")
             }
+        } finally {
+            connection?.disconnect()
         }
     }
+}
+
+// Funkcja do zapisywania tokenu w SharedPreferences
+private fun saveToken(context: Context, token: String) {
+    val sharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+    sharedPreferences.edit().putString("jwt_token", token).apply()
 }
