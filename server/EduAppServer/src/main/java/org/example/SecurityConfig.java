@@ -24,7 +24,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()  // Zezwól na logowanie
-                        .requestMatchers("/api/courses/**").authenticated()  // Wymagaj uwierzytelnienia dla kursów
+                        .requestMatchers("/api/courses/**").permitAll()/*authenticated()*/  // Wymagaj uwierzytelnienia dla kursów
+                        .requestMatchers("files/**").permitAll()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

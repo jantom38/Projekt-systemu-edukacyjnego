@@ -1,10 +1,16 @@
 package com.example.myapplication
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,20 +23,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
-// Model danych dla pliku kursu
 data class CourseFile(
     val id: Long,
     val fileName: String,
     val fileUrl: String
 )
 
-// ViewModel dla plików kursu
 class CourseFilesViewModel(context: Context, private val courseId: Long) : ViewModel() {
     private val _files = mutableStateOf<List<CourseFile>>(emptyList())
     val files: State<List<CourseFile>> = _files
 
-    private val _isLoading = mutableStateOf(false)
+    private val _isLoading = mutableStateOf(true)
     val isLoading: State<Boolean> = _isLoading
 
     private val _error = mutableStateOf<String?>(null)
@@ -45,20 +50,21 @@ class CourseFilesViewModel(context: Context, private val courseId: Long) : ViewM
     fun loadFiles() {
         viewModelScope.launch {
             _isLoading.value = true
+            _error.value = null
             try {
-                _files.value = apiService.getCourseFiles(courseId)
-                _error.value = null
-                Log.d("CourseFilesViewModel", "Files loaded: ${_files.value}")
-            } catch (e: retrofit2.HttpException) {
+                val response = apiService.getCourseFiles(courseId)
+                _files.value = response
+                Log.d("CourseFiles", "Loaded files: ${_files.value}")
+            } catch (e: HttpException) {
                 _error.value = when (e.code()) {
-                    401 -> "Brak autoryzacji. Zaloguj się ponownie."
-                    404 -> "Kurs lub pliki nie znalezione."
-                    else -> "Błąd serwera: ${e.code()} - ${e.message()}"
+                    401 -> "Brak autoryzacji"
+                    404 -> "Kurs nie znaleziony"
+                    else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("CourseFilesViewModel", "HTTP error: ${_error.value}")
+                Log.e("CourseFiles", "HTTP error", e)
             } catch (e: Exception) {
                 _error.value = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("CourseFilesViewModel", "Connection error: ${_error.value}")
+                Log.e("CourseFiles", "Network error", e)
             } finally {
                 _isLoading.value = false
             }
@@ -74,9 +80,6 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
             return CourseFilesViewModel(context, courseId) as T
         }
     })
-    val files by viewModel.files
-    val isLoading by viewModel.isLoading
-    val error by viewModel.error
 
     Column(
         modifier = Modifier
@@ -85,12 +88,12 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
     ) {
         Text(
             text = "Pliki kursu",
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(bottom = 16.dp)
         )
-        Spacer(modifier = Modifier.height(16.dp))
 
         when {
-            isLoading -> {
+            viewModel.isLoading.value -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -98,77 +101,89 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
                     CircularProgressIndicator()
                 }
             }
-            error != null -> {
+
+            viewModel.error.value != null -> {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = error!!,
+                        text = viewModel.error.value!!,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge
+                        modifier = Modifier.padding(16.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { viewModel.loadFiles() }) {
+                    Button(
+                        onClick = { viewModel.loadFiles() },
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
                         Text("Spróbuj ponownie")
                     }
                 }
             }
-            files.isEmpty() -> {
+
+            viewModel.files.value.isEmpty() -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Brak dostępnych plików",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    Text("Brak plików dla tego kursu")
                 }
             }
+
             else -> {
-                LazyColumn {
-                    items(files.size) { index ->
-                        val file = files[index]
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .clickable {
-                                    // TODO: Otwórz fileUrl w przeglądarce lub aplikacji
-                                    Log.d("CourseFilesScreen", "Clicked file: ${file.fileUrl}")
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = file.fileName,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "URL: ${file.fileUrl}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                            }
-                        }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(viewModel.files.value) { file ->
+                        FileCard(file = file, context = context)
                     }
                 }
             }
         }
     }
 
-    // Wylogowanie przy błędzie 401
-    LaunchedEffect(error) {
-        if (error != null && error!!.contains("Brak autoryzacji")) {
-            context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                .edit()
-                .clear()
-                .apply()
-            navController.navigate("login") {
-                popUpTo(navController.graph.startDestinationId) { inclusive = true }
-            }
+        // Dodaj  przycisku wstecz w AppBar
+
+
+
+}
+
+@Composable
+fun FileCard(file: CourseFile, context: Context) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(file.fileUrl)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(
+                        context,
+                        "Nie można otworzyć pliku: ${e.localizedMessage}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    Log.e("FileCard", "Error opening file", e)
+                }
+            },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = file.fileName,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = file.fileUrl,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

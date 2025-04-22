@@ -42,7 +42,13 @@ public class ListOfCoursesModule {
     }
 
     @GetMapping("/{id}/files")
-    public List<CourseFile> getCourseFiles(@PathVariable Long id) {
-        return courseFileRepository.findByCourseId(id);
+    public ResponseEntity<?> getCourseFiles(@PathVariable Long id) {
+        if (!courseRepository.existsById(id)) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "error", "Course not found",
+                    "status", 404
+            ));
+        }
+        return ResponseEntity.ok(courseFileRepository.findByCourseId(id));
     }
 }
