@@ -77,8 +77,8 @@ public class DataInitializer {
                     .orElseThrow(() -> new RuntimeException("Kurs 'Hibernate' nie znaleziony!"));
 
             // Spójne nazwy plików (małe litery + podkreślenia)
-            courseFileRepository.save(new CourseFile("java_intro.pdf", "http://localhost:8080/files/java_intro.pdf", javaCourse));
-            courseFileRepository.save(new CourseFile("java_exercises.zip", "http://localhost:8080/files/java_exercises.zip", javaCourse));
+            courseFileRepository.save(new CourseFile("java_intro.pdf", "http://10.0.2.2:8080/files/java_intro.pdf", javaCourse));
+            courseFileRepository.save(new CourseFile("java_exercises.zip", "http://10.0.2.2:8080/files/java_exercises.zip", javaCourse));
 
             courseFileRepository.save(new CourseFile("spring_guide.pdf", "http://localhost:8080/files/spring_guide.pdf", springCourse));
             courseFileRepository.save(new CourseFile("spring_tutorial.mp4", "http://localhost:8080/files/spring_tutorial.mp4", springCourse));
