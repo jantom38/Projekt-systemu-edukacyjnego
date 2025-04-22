@@ -18,18 +18,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 
-// Model danych kursu
-data class Course(
+// Model danych dla pliku kursu
+data class CourseFile(
     val id: Long,
-    val courseName: String,
-    val description: String,
-    val accessKey: String
+    val fileName: String,
+    val fileUrl: String
 )
 
-// ViewModel do zarządzania kursami
-class CourseViewModel(context: Context) : ViewModel() {
-    private val _courses = mutableStateOf<List<Course>>(emptyList())
-    val courses: State<List<Course>> = _courses
+// ViewModel dla plików kursu
+class CourseFilesViewModel(context: Context, private val courseId: Long) : ViewModel() {
+    private val _files = mutableStateOf<List<CourseFile>>(emptyList())
+    val files: State<List<CourseFile>> = _files
 
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
@@ -40,26 +39,26 @@ class CourseViewModel(context: Context) : ViewModel() {
     private val apiService = RetrofitClient.getInstance(context)
 
     init {
-        loadCourses()
+        loadFiles()
     }
 
-    fun loadCourses() {
+    fun loadFiles() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _courses.value = apiService.getAllCourses()
+                _files.value = apiService.getCourseFiles(courseId)
                 _error.value = null
-                Log.d("CourseViewModel", "Courses loaded successfully: ${_courses.value}")
+                Log.d("CourseFilesViewModel", "Files loaded: ${_files.value}")
             } catch (e: retrofit2.HttpException) {
                 _error.value = when (e.code()) {
                     401 -> "Brak autoryzacji. Zaloguj się ponownie."
-                    403 -> "Brak uprawnień do kursów."
+                    404 -> "Kurs lub pliki nie znalezione."
                     else -> "Błąd serwera: ${e.code()} - ${e.message()}"
                 }
-                Log.e("CourseViewModel", "HTTP error: ${_error.value}")
+                Log.e("CourseFilesViewModel", "HTTP error: ${_error.value}")
             } catch (e: Exception) {
                 _error.value = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("CourseViewModel", "Connection error: ${_error.value}")
+                Log.e("CourseFilesViewModel", "Connection error: ${_error.value}")
             } finally {
                 _isLoading.value = false
             }
@@ -67,16 +66,15 @@ class CourseViewModel(context: Context) : ViewModel() {
     }
 }
 
-// Ekran listy kursów
 @Composable
-fun CourseListScreen(navController: NavHostController) {
+fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
     val context = LocalContext.current
-    val viewModel: CourseViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+    val viewModel: CourseFilesViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return CourseViewModel(context) as T
+            return CourseFilesViewModel(context, courseId) as T
         }
     })
-    val courses by viewModel.courses
+    val files by viewModel.files
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
@@ -86,10 +84,9 @@ fun CourseListScreen(navController: NavHostController) {
             .padding(16.dp)
     ) {
         Text(
-            text = "Dostępne kursy",
+            text = "Pliki kursu",
             style = MaterialTheme.typography.headlineMedium
         )
-
         Spacer(modifier = Modifier.height(16.dp))
 
         when {
@@ -101,7 +98,6 @@ fun CourseListScreen(navController: NavHostController) {
                     CircularProgressIndicator()
                 }
             }
-
             error != null -> {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -114,50 +110,44 @@ fun CourseListScreen(navController: NavHostController) {
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { viewModel.loadCourses() }) {
+                    Button(onClick = { viewModel.loadFiles() }) {
                         Text("Spróbuj ponownie")
                     }
                 }
             }
-
-            courses.isEmpty() -> {
+            files.isEmpty() -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Brak dostępnych kursów",
+                        text = "Brak dostępnych plików",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
-
             else -> {
                 LazyColumn {
-                    items(courses.size) { index ->
-                        val course = courses[index]
+                    items(files.size) { index ->
+                        val file = files[index]
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp)
                                 .clickable {
-                                    navController.navigate("access_key/${course.id}")
+                                    // TODO: Otwórz fileUrl w przeglądarce lub aplikacji
+                                    Log.d("CourseFilesScreen", "Clicked file: ${file.fileUrl}")
                                 },
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = course.courseName,
+                                    text = file.fileName,
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = course.description,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Klucz dostępu: ${course.accessKey}",
+                                    text = "URL: ${file.fileUrl}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.secondary
                                 )

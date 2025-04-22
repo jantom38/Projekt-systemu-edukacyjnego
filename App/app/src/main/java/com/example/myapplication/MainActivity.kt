@@ -8,9 +8,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-import com.example.myapplication.ui.LoginScreen
-import com.example.myapplication.ui.CourseListScreen
-//import com.example.myapplication.ui.CourseDetailScreen
+import com.example.myapplication.AccessKeyScreen
+import com.example.myapplication.LoginScreen
+import com.example.myapplication.CourseListScreen
+import com.example.myapplication.CourseFilesScreen
+//import com.example.myapplication.CourseDetailScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -32,9 +34,17 @@ fun EduApp() {
     NavHost(navController = navController, startDestination = "login") {
         composable("login") { LoginScreen(navController) }
         composable("courses") { CourseListScreen(navController) }
-        composable("course/{courseId}") { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getString("courseId")
-            //CourseDetailScreen(courseId ?: "Brak ID")
+        composable("access_key/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
+            if (courseId != null) {
+                AccessKeyScreen(navController, courseId)
+            }
+        }
+        composable("course_files/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
+            if (courseId != null) {
+                CourseFilesScreen(navController, courseId)
+            }
         }
     }
 }

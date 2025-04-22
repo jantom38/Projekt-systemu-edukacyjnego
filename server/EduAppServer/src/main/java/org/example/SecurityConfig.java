@@ -25,10 +25,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()  // Zezwól na logowanie
                         .requestMatchers("/api/courses/**").authenticated()  // Wymagaj uwierzytelnienia dla kursów
-                        .anyRequest().authenticated()  // Wszystkie inne żądania wymagają uwierzytelnienia
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)  // Bezstanowa sesja
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);  // Dodaj filtr JWT
 
