@@ -1,4 +1,4 @@
-package org.example;
+package org.example.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -24,8 +24,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()  // Zezwól na logowanie
-                        .requestMatchers("/api/courses/**").permitAll()/*authenticated()*/  // Wymagaj uwierzytelnienia dla kursów
-                        .requestMatchers("files/**").permitAll()
+                        .requestMatchers("/api/courses/**").authenticated()/*authenticated()*/  // Wymagaj uwierzytelnienia dla kursów
+                        .requestMatchers("files/**").authenticated()
 
                         .anyRequest().authenticated()
                 )

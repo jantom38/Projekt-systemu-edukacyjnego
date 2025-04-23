@@ -1,7 +1,8 @@
-package org.example;
+package org.example.database;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+
 @Entity
 public class CourseFile {
     @Id

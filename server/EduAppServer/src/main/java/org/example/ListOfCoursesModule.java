@@ -1,5 +1,8 @@
 package org.example;
 
+import org.example.DataBaseRepositories.CourseFileRepository;
+import org.example.DataBaseRepositories.CourseRepository;
+import org.example.database.Course;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
