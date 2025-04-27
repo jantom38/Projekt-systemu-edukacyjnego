@@ -69,7 +69,10 @@ class CourseViewModel(context: Context) : ViewModel() {
 
 // Ekran listy kursów
 @Composable
-fun CourseListScreen(navController: NavHostController) {
+fun CourseListScreen(
+    navController: NavHostController,
+    onCourseClick: (Course) -> Unit = {} // Dodajemy nowy parametr
+) {
     val context = LocalContext.current
     val viewModel: CourseViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -141,7 +144,7 @@ fun CourseListScreen(navController: NavHostController) {
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp)
                                 .clickable {
-                                    navController.navigate("access_key/${course.id}")
+                                    onCourseClick(course) // Używamy nowego parametru
                                 },
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {
@@ -165,19 +168,6 @@ fun CourseListScreen(navController: NavHostController) {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    // Wylogowanie przy błędzie 401
-    LaunchedEffect(error) {
-        if (error != null && error!!.contains("Brak autoryzacji")) {
-            context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                .edit()
-                .clear()
-                .apply()
-            navController.navigate("login") {
-                popUpTo(navController.graph.startDestinationId) { inclusive = true }
             }
         }
     }

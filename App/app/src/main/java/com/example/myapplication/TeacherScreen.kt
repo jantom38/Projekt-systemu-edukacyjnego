@@ -1,7 +1,10 @@
 package com.example.myapplication
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -11,159 +14,260 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 @Composable
 fun TeacherScreen(navController: NavHostController) {
     val context = LocalContext.current
-    var showDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Stany dla formularza dodawania kursu
+    var showAddCourseDialog by remember { mutableStateOf(false) } // Dodajemy tę deklarację
     var courseName by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var accessKey by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Button(
-            onClick = { showDialog = true },
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Dodaj kurs")
-            Spacer(Modifier.width(8.dp))
-            Text("Dodaj kurs")
+    // Stany dla uploadu plików
+    var selectedCourseId by remember { mutableStateOf<Long?>(null) }
+    var showFilePicker by remember { mutableStateOf(false) }
+
+    val fileUploadViewModel: FileUploadViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return FileUploadViewModel(context) as T
         }
+    })
 
-        // Lista kursów (możesz dodać później)
-        CourseListScreen(navController)
+    // Funkcja do dodawania kursu
+    suspend fun addCourse(name: String, description: String, accessKey: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val apiService = RetrofitClient.getInstance(context)
+                val response = apiService.createCourse(
+                    Course(
+                        id = 0,
+                        courseName = name,
+                        description = description,
+                        accessKey = accessKey
+                    )
+                )
+
+                if (!response.isSuccessful) {
+                    throw Exception("Błąd serwera: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                throw Exception("Błąd dodawania kursu: ${e.message}")
+            }
+        }
     }
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Dodaj nowy kurs") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = courseName,
-                        onValueChange = { courseName = it },
-                        label = { Text("Nazwa kursu*") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Opis*") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = accessKey,
-                        onValueChange = { accessKey = it },
-                        label = { Text("Klucz dostępu*") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    errorMessage?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error)
-                    }
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showAddCourseDialog = true },
+                icon = { Icon(Icons.Default.Add, contentDescription = "Dodaj kurs") },
+                text = { Text("Dodaj kurs") }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            CourseListScreen(
+                navController = navController,
+                onCourseClick = { course ->
+                    selectedCourseId = course.id
+                    showFilePicker = true
                 }
-            },
-            confirmButton = {
-                if (isLoading) {
-                    CircularProgressIndicator()
-                } else {
+            )
+        }
+
+        // Dialog dodawania kursu
+        if (showAddCourseDialog) {
+            AlertDialog(
+                onDismissRequest = { showAddCourseDialog = false },
+                title = { Text("Dodaj nowy kurs") },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = courseName,
+                            onValueChange = { courseName = it },
+                            label = { Text("Nazwa kursu*") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = { Text("Opis*") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = accessKey,
+                            onValueChange = { accessKey = it },
+                            label = { Text("Klucz dostępu*") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
                     Button(
                         onClick = {
                             if (courseName.isBlank() || description.isBlank() || accessKey.isBlank()) {
-                                errorMessage = "Wszystkie pola są wymagane"
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Wszystkie pola są wymagane")
+                                }
                                 return@Button
                             }
 
-                            addCourse(
-                                context = context,
-                                name = courseName,
-                                description = description,
-                                accessKey = accessKey,
-                                onSuccess = {
-                                    showDialog = false
+                            scope.launch {
+                                try {
+                                    addCourse(courseName, description, accessKey)
+                                    snackbarHostState.showSnackbar("Kurs dodany pomyślnie")
+                                    showAddCourseDialog = false
                                     courseName = ""
                                     description = ""
                                     accessKey = ""
-                                    // Odśwież listę kursów
-                                    navController.navigate("teacher") {
-                                        popUpTo("teacher") { inclusive = true }
-                                    }
-                                },
-                                onError = { message ->
-                                    errorMessage = message
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar(e.message ?: "Błąd dodawania kursu")
                                 }
-                            )
+                            }
                         }
                     ) {
                         Text("Dodaj")
                     }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddCourseDialog = false }) {
+                        Text("Anuluj")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDialog = false }
-                ) {
-                    Text("Anuluj")
+            )
+        }
+
+        // Picker plików
+        if (showFilePicker) {
+            val filePickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
+                uri?.let {
+                    selectedCourseId?.let { courseId ->
+                        scope.launch {
+                            fileUploadViewModel.uploadFile(courseId, it, context)
+                        }
+                    }
                 }
+                showFilePicker = false
             }
-        )
+
+            LaunchedEffect(showFilePicker) {
+                filePickerLauncher.launch("*/*")
+            }
+        }
     }
 }
 
-private fun addCourse(
-    context: Context,
-    name: String,
-    description: String,
-    accessKey: String,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
+@Composable
+private fun AddCourseDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (name: String, desc: String, key: String) -> Unit // Typy parametrów w funkcji
 ) {
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            Log.d("API_DEBUG", "Próba dodania kursu: $name")
-            val apiService = RetrofitClient.getInstance(context)
-            val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                .getString("jwt_token", null)
-            Log.d("API_DEBUG", "Token: ${token?.take(10)}...") // Logujemy fragment tokenu
+    var courseName by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var accessKey by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-            val response = apiService.createCourse(
-                Course(
-                    id = 0,
-                    courseName = name,
-                    description = description,
-                    accessKey = accessKey
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Dodaj nowy kurs") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = courseName,
+                    onValueChange = { courseName = it },
+                    label = { Text("Nazwa kursu*") },
+                    modifier = Modifier.fillMaxWidth()
                 )
-            )
-
-            Log.d("API_DEBUG", "Odpowiedź: ${response.code()} - ${response.message()}")
-
-            withContext(Dispatchers.Main) {
-                if (response.isSuccessful) {
-                    onSuccess()
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    Log.e("API_ERROR", "Błąd ${response.code()}: $errorBody")
-                    onError("Błąd serwera: ${response.code()} - ${errorBody ?: response.message()}")
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Opis*") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = accessKey,
+                    onValueChange = { accessKey = it },
+                    label = { Text("Klucz dostępu*") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                errorMessage?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error)
                 }
             }
-        } catch (e: Exception) {
-            Log.e("API_EXCEPTION", "Błąd: ${e.message}", e)
-            withContext(Dispatchers.Main) {
-                onError("Błąd połączenia: ${e.message ?: "Nieznany błąd"}")
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (courseName.isBlank() || description.isBlank() || accessKey.isBlank()) {
+                        errorMessage = "Wszystkie pola są wymagane"
+                        return@Button
+                    }
+                    onSubmit(courseName, description, accessKey) // Tutaj typy są już znane
+                }
+            ) {
+                Text("Dodaj")
             }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Anuluj")
+            }
+        }
+    )
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UserScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Moje kursy") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            CourseListScreen(
+                navController = navController,
+                onCourseClick = { course ->
+                    // Przekierowanie do ekranu z kluczem dostępu
+                    navController.navigate("access_key/${course.id}")
+                }
+            )
         }
     }
 }

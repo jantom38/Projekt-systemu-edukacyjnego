@@ -78,10 +78,10 @@ fun LoginScreen(navController: NavHostController) {
                         // Przekierowanie w zależności od roli
                         when (role) {
                             "TEACHER" -> navController.navigate("teacher") {
-                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                                popUpTo("login") { inclusive = true }
                             }
-                            else -> navController.navigate("courses") {
-                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            else -> navController.navigate("user") {
+                                popUpTo("login") { inclusive = true }
                             }
                         }
                     },

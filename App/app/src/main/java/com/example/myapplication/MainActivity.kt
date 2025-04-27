@@ -27,20 +27,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 @Composable
 fun EduApp() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "login") {
         composable("login") { LoginScreen(navController) }
         composable("courses") { CourseListScreen(navController) }
-        composable("teacher") { TeacherScreen(navController) } // DODAJ TĘ LINIĘ
+        composable("user") { UserScreen(navController) }
+        composable("teacher") { TeacherScreen(navController) }
+
+        // Wspólne trasy dla wszystkich użytkowników
         composable("access_key/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
             if (courseId != null) {
-                AccessKeyScreen(navController, courseId)
+                AccessKeyScreen(
+                    navController = navController,
+                    courseId = courseId,
+                    onSuccess = {
+                        // Po poprawnym wprowadzeniu klucza przejdź do plików
+                        navController.navigate("course_files/$courseId") {
+                            popUpTo("user") { inclusive = false }
+                        }
+                    }
+                )
             }
         }
+
         composable("course_files/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
             if (courseId != null) {

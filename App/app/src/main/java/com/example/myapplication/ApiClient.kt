@@ -3,13 +3,17 @@ package com.example.myapplication
 import android.content.Context
 import android.util.Log
 import okhttp3.Interceptor
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 
 // Interfejs API Retrofit dla wszystkich endpointów
@@ -26,7 +30,12 @@ interface CourseApiService {
 
         @POST("/api/courses")
         suspend fun createCourse(@Body course: Course): Response<Course>
-
+    @Multipart
+    @POST("/api/courses/{courseId}/files/upload")
+    suspend fun uploadFile(
+        @Path("courseId") courseId: Long,
+        @Part file: MultipartBody.Part
+    ): Response<ResponseBody>
 }
 
 // Obiekt Retrofit z interceptorem dla tokenu JWT

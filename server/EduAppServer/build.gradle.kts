@@ -19,7 +19,13 @@ dependencies {
 
     // Spring Security - konieczne dla autentykacji i autoryzacji
     implementation("org.springframework.boot:spring-boot-starter-security")
+    // Lombok dla logowania
+    compileOnly("org.projectlombok:lombok:1.18.30")
+    annotationProcessor("org.projectlombok:lombok:1.18.30")
 
+    // SLF4J (implementacja logback)
+    implementation("org.slf4j:slf4j-api:2.0.7")
+    implementation("ch.qos.logback:logback-classic:1.4.8")
 
     // Baza danych
     implementation("org.xerial:sqlite-jdbc:3.41.2.2")

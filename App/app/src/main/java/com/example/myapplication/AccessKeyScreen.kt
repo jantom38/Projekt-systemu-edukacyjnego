@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun AccessKeyScreen(navController: NavHostController, courseId: Long) {
+fun AccessKeyScreen(navController: NavHostController, courseId: Long,onSuccess: () -> Unit = { navController.navigate("course_files/$courseId") } ) {
     val context = LocalContext.current
     var accessKey by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
