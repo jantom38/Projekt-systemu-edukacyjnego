@@ -1,6 +1,7 @@
 package org.example;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.example.DataBaseRepositories.CourseFileRepository;
 import org.example.DataBaseRepositories.CourseRepository;
 import org.example.database.Course;
@@ -34,11 +35,15 @@ public class FileUploadController {
     @Autowired
     private CourseRepository courseRepository;
 
+
     @PostMapping("/upload")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> uploadFile(
             @PathVariable Long courseId,
             @RequestParam("file") MultipartFile file) {
+
+
+        log.info("Starting file upload for course ID: {}", courseId);
 
         try {
             // 1. Walidacja kursu
@@ -53,25 +58,20 @@ public class FileUploadController {
 
             // 3. Przygotowanie katalogu
             Path uploadPath = Paths.get(uploadDir).toAbsolutePath();
-            log.info("Upload path: {}", uploadPath);
-
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
-                log.info("Created upload directory");
             }
 
-            if (!Files.isWritable(uploadPath)) {
-                log.error("Upload directory is not writable");
-                return ResponseEntity.internalServerError()
-                        .body(Map.of("error", "Upload directory not writable"));
-            }
-
-            // 4. Generowanie unikalnej nazwy pliku
+            // 4. Poprawione generowanie nazwy pliku
             String originalFileName = file.getOriginalFilename();
-            String fileExtension = originalFileName.contains(".")
-                    ? originalFileName.substring(originalFileName.lastIndexOf("."))
-                    : "";
+            String fileExtension = "";
+
+            if (originalFileName != null && originalFileName.contains(".")) {
+                fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+            }
+
             String uniqueFileName = UUID.randomUUID() + fileExtension;
+            log.info("Generated filename: {}", uniqueFileName);
 
             // 5. Zapis pliku na dysku
             Path filePath = uploadPath.resolve(uniqueFileName);
@@ -81,7 +81,7 @@ public class FileUploadController {
             // 6. Zapis metadanych w bazie
             CourseFile courseFile = new CourseFile();
             courseFile.setFileName(originalFileName);
-            courseFile.setFileUrl("/" + uploadDir + "/" + uniqueFileName);
+            courseFile.setFileUrl("/uploads/" + uniqueFileName); // Upewnij się że to pasuje do Twojej konfiguracji
             courseFile.setCourse(course);
 
             CourseFile savedFile = courseFileRepository.save(courseFile);
@@ -89,8 +89,10 @@ public class FileUploadController {
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "File uploaded successfully",
-                    "filePath", filePath.toString(),
-                    "fileUrl", savedFile.getFileUrl()
+                    "fileId", savedFile.getId(),
+                    "fileName", savedFile.getFileName(),
+                    "fileUrl", savedFile.getFileUrl(),
+                    "filePath", filePath.toString()
             ));
 
         } catch (Exception e) {
