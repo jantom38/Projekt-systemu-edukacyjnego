@@ -71,10 +71,19 @@ fun LoginScreen(navController: NavHostController) {
                     context = context,
                     username = username,
                     password = password,
-                    onSuccess = { message ->
+                    onSuccess = { role, message ->
                         isLoading = false
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        navController.navigate("courses")
+
+                        // Przekierowanie w zależności od roli
+                        when (role) {
+                            "TEACHER" -> navController.navigate("teacher") {
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            }
+                            else -> navController.navigate("courses") {
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            }
+                        }
                     },
                     onError = { errorMessage ->
                         isLoading = false
@@ -98,7 +107,7 @@ private fun authenticateUser(
     context: Context,
     username: String,
     password: String,
-    onSuccess: (String) -> Unit,
+    onSuccess: (role: String, message: String) -> Unit,
     onError: (String) -> Unit
 ) {
     CoroutineScope(Dispatchers.IO).launch {
@@ -106,7 +115,6 @@ private fun authenticateUser(
         try {
             val serverUrl = "http://10.0.2.2:8080/api/auth/login"
 
-            // Tworzenie JSON-a za pomocą JSONObject
             val jsonPayload = JSONObject().apply {
                 put("username", username)
                 put("password", password)
@@ -122,13 +130,11 @@ private fun authenticateUser(
                 readTimeout = 5000
             }
 
-            // Wysłanie danych
             connection.outputStream.use { os ->
                 os.write(jsonPayload.toByteArray(Charsets.UTF_8))
                 os.flush()
             }
 
-            // Obsługa odpowiedzi
             val responseCode = connection.responseCode
             val response = if (responseCode in 200..299) {
                 connection.inputStream.bufferedReader().use { it.readText() }
@@ -140,11 +146,11 @@ private fun authenticateUser(
                 HttpURLConnection.HTTP_OK -> {
                     val responseJson = JSONObject(response)
                     if (responseJson.getBoolean("success")) {
-                        // Zapisanie tokenu JWT
                         val token = responseJson.getString("token")
+                        val role = responseJson.getString("role") // Pobierz rolę z odpowiedzi
                         saveToken(context, token)
                         withContext(Dispatchers.Main) {
-                            onSuccess(responseJson.getString("message"))
+                            onSuccess(role, responseJson.getString("message"))
                         }
                     } else {
                         withContext(Dispatchers.Main) {
@@ -173,7 +179,6 @@ private fun authenticateUser(
     }
 }
 
-// Funkcja do zapisywania tokenu w SharedPreferences
 private fun saveToken(context: Context, token: String) {
     val sharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
     sharedPreferences.edit().putString("jwt_token", token).apply()

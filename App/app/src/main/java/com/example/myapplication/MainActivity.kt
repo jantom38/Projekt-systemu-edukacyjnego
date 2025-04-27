@@ -34,6 +34,7 @@ fun EduApp() {
     NavHost(navController = navController, startDestination = "login") {
         composable("login") { LoginScreen(navController) }
         composable("courses") { CourseListScreen(navController) }
+        composable("teacher") { TeacherScreen(navController) } // DODAJ TĘ LINIĘ
         composable("access_key/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
             if (courseId != null) {

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
@@ -21,6 +22,11 @@ interface CourseApiService {
 
     @GET("/api/courses/{id}/files")
     suspend fun getCourseFiles(@Path("id") courseId: Long): List<CourseFile>
+
+
+        @POST("/api/courses")
+        suspend fun createCourse(@Body course: Course): Response<Course>
+
 }
 
 // Obiekt Retrofit z interceptorem dla tokenu JWT
