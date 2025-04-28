@@ -1,30 +1,39 @@
 package org.example;
 
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Logger;
 import org.example.DataBaseRepositories.CourseFileRepository;
 import org.example.DataBaseRepositories.CourseRepository;
 import org.example.database.Course;
+import org.example.database.CourseFile;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/courses")
-
 public class ListOfCoursesModule {
+
+    @Value("${file.upload-dir:#{systemProperties['user.dir'] + '/uploads'}}")
+    private String uploadDir;
 
     private final CourseRepository courseRepository;
     private final CourseFileRepository courseFileRepository;
 
     @Autowired
-    public ListOfCoursesModule(CourseRepository courseRepository, CourseFileRepository courseFileRepository) {
+    public ListOfCoursesModule(CourseRepository courseRepository,
+                               CourseFileRepository courseFileRepository) {
         this.courseRepository = courseRepository;
         this.courseFileRepository = courseFileRepository;
     }
@@ -33,16 +42,14 @@ public class ListOfCoursesModule {
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
     }
-    // W pliku ListOfCoursesModule.java
+
     @PostMapping
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> addCourse(@RequestBody Course course) {
-        // Sprawdzenie czy klucz dostępu został podany
         if (course.getAccessKey() == null || course.getAccessKey().isBlank()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Klucz dostępu jest wymagany"));
         }
-
         Course savedCourse = courseRepository.save(course);
         return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -52,7 +59,8 @@ public class ListOfCoursesModule {
     }
 
     @PostMapping("/{id}/verify-key")
-    public ResponseEntity<?> verifyAccessKey(@PathVariable Long id, @RequestBody Map<String, String> request) {
+    public ResponseEntity<?> verifyAccessKey(@PathVariable Long id,
+                                             @RequestBody Map<String, String> request) {
         String providedKey = request.get("accessKey");
         return courseRepository.findById(id)
                 .map(course -> {
@@ -76,5 +84,41 @@ public class ListOfCoursesModule {
             ));
         }
         return ResponseEntity.ok(courseFileRepository.findByCourseId(id));
+    }
+
+    /**
+     * Endpoint for deleting a course file. Only TEACHER role can call this.
+     */
+    @DeleteMapping("/{courseId}/files/{fileId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> deleteCourseFile(@PathVariable Long courseId,
+                                              @PathVariable Long fileId) {
+        // Check course exists
+        if (!courseRepository.existsById(courseId)) {
+            return ResponseEntity.status(404)
+                    .body(Map.of("success", false, "message", "Course not found"));
+        }
+
+        return courseFileRepository.findById(fileId)
+                .filter(cf -> cf.getCourse().getId().equals(courseId))
+                .map(cf -> {
+                    // Attempt to delete file from disk
+
+                    try {
+                        String filename = cf.getFileUrl().replaceFirst("/uploads/", "");
+                        Path filePath = Paths.get(uploadDir).resolve(filename).toAbsolutePath();
+                        Files.deleteIfExists(filePath);
+                    } catch (IOException e) {
+                    }
+
+                    // Delete metadata
+                    courseFileRepository.delete(cf);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "File deleted successfully"
+                    ));
+                })
+                .orElse(ResponseEntity.status(404)
+                        .body(Map.of("success", false, "message", "File not found for this course")));
     }
 }

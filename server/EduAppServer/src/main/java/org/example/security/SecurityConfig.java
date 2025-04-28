@@ -33,6 +33,9 @@ public class SecurityConfig {
                         .requestMatchers("/files/**").permitAll()
                         .requestMatchers("/" + uploadDir + "/**").permitAll() // Zezwól na dostęp do plików
                         .requestMatchers(HttpMethod.POST, "/api/courses/**/files/upload").hasRole("TEACHER")
+                        .requestMatchers(HttpMethod.POST, "/api/courses/**/files/upload").hasRole("TEACHER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/courses/*/files/*").hasRole("TEACHER")
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

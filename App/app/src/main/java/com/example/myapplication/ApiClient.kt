@@ -10,6 +10,7 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -35,6 +36,11 @@ interface CourseApiService {
     suspend fun uploadFile(
         @Path("courseId") courseId: Long,
         @Part file: MultipartBody.Part
+    ): Response<ResponseBody>
+    @DELETE("/api/courses/{courseId}/files/{fileId}")
+    suspend fun deleteCourseFile(
+        @Path("courseId") courseId: Long,
+        @Path("fileId") fileId: Long
     ): Response<ResponseBody>
 }
 

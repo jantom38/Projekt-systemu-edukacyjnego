@@ -6,11 +6,13 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -18,60 +20,37 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * Główny ekran dla nauczyciela: lista kursów z przyciskami
+ * „Dodaj plik” i „Usuń plik”, plus fab do dodawania kursu.
+ */
 @Composable
 fun TeacherScreen(navController: NavHostController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Stany dla formularza dodawania kursu
-    var showAddCourseDialog by remember { mutableStateOf(false) } // Dodajemy tę deklarację
-    var courseName by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var accessKey by remember { mutableStateOf("") }
-
-    // Stany dla uploadu plików
+    // Stany do pickera plików
     var selectedCourseId by remember { mutableStateOf<Long?>(null) }
     var showFilePicker by remember { mutableStateOf(false) }
 
+    // ViewModel do uploadu
     val fileUploadViewModel: FileUploadViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
             return FileUploadViewModel(context) as T
         }
     })
-
-    // Funkcja do dodawania kursu
-    suspend fun addCourse(name: String, description: String, accessKey: String) {
-        withContext(Dispatchers.IO) {
-            try {
-                val apiService = RetrofitClient.getInstance(context)
-                val response = apiService.createCourse(
-                    Course(
-                        id = 0,
-                        courseName = name,
-                        description = description,
-                        accessKey = accessKey
-                    )
-                )
-
-                if (!response.isSuccessful) {
-                    throw Exception("Błąd serwera: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                throw Exception("Błąd dodawania kursu: ${e.message}")
-            }
-        }
-    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { showAddCourseDialog = true },
+                onClick = { navController.navigate("add_course") },
                 icon = { Icon(Icons.Default.Add, contentDescription = "Dodaj kurs") },
                 text = { Text("Dodaj kurs") }
             )
@@ -84,159 +63,194 @@ fun TeacherScreen(navController: NavHostController) {
                 .padding(16.dp)
         ) {
             CourseListScreen(
-                navController = navController,
-                onCourseClick = { course ->
+                onAddFileClick = { course ->
                     selectedCourseId = course.id
                     showFilePicker = true
+                },
+                onDeleteFileClick = { course ->
+                    navController.navigate("manage_files/${course.id}")
                 }
             )
         }
 
-        // Dialog dodawania kursu
-        if (showAddCourseDialog) {
-            AlertDialog(
-                onDismissRequest = { showAddCourseDialog = false },
-                title = { Text("Dodaj nowy kurs") },
-                text = {
-                    Column {
-                        OutlinedTextField(
-                            value = courseName,
-                            onValueChange = { courseName = it },
-                            label = { Text("Nazwa kursu*") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = description,
-                            onValueChange = { description = it },
-                            label = { Text("Opis*") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = accessKey,
-                            onValueChange = { accessKey = it },
-                            label = { Text("Klucz dostępu*") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (courseName.isBlank() || description.isBlank() || accessKey.isBlank()) {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Wszystkie pola są wymagane")
-                                }
-                                return@Button
-                            }
-
-                            scope.launch {
-                                try {
-                                    addCourse(courseName, description, accessKey)
-                                    snackbarHostState.showSnackbar("Kurs dodany pomyślnie")
-                                    showAddCourseDialog = false
-                                    courseName = ""
-                                    description = ""
-                                    accessKey = ""
-                                } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar(e.message ?: "Błąd dodawania kursu")
-                                }
-                            }
-                        }
-                    ) {
-                        Text("Dodaj")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddCourseDialog = false }) {
-                        Text("Anuluj")
-                    }
-                }
-            )
-        }
-
-        // Picker plików
+        // Picker plików do uploadu
         if (showFilePicker) {
             val filePickerLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()
             ) { uri: Uri? ->
-                uri?.let {
+                uri?.let { uriNonNull ->
                     selectedCourseId?.let { courseId ->
                         scope.launch {
-                            fileUploadViewModel.uploadFile(courseId, it, context)
+                            fileUploadViewModel.uploadFile(courseId, uriNonNull, context)
                         }
                     }
                 }
                 showFilePicker = false
             }
-
-            LaunchedEffect(showFilePicker) {
+            LaunchedEffect(Unit) {
                 filePickerLauncher.launch("*/*")
             }
         }
     }
 }
 
-@Composable
-private fun AddCourseDialog(
-    onDismiss: () -> Unit,
-    onSubmit: (name: String, desc: String, key: String) -> Unit // Typy parametrów w funkcji
-) {
-    var courseName by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var accessKey by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Dodaj nowy kurs") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = courseName,
-                    onValueChange = { courseName = it },
-                    label = { Text("Nazwa kursu*") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Opis*") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = accessKey,
-                    onValueChange = { accessKey = it },
-                    label = { Text("Klucz dostępu*") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                errorMessage?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error)
+/**
+ * Lista kursów z przyciskami "Dodaj plik" i "Usuń plik".
+ * Używa Twojego API: getAllCourses() zwraca od razu List<Course>.
+ */
+@Composable
+fun CourseListScreen(
+    onAddFileClick: (Course) -> Unit,
+    onDeleteFileClick: (Course) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var courses by remember { mutableStateOf<List<Course>>(emptyList()) }
+
+    // Przy starcie pobierz listę kursów
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val api = RetrofitClient.getInstance(context)
+                val fetched = api.getAllCourses()       // <<< tu poprawka!
+                withContext(Dispatchers.Main) {
+                    courses = fetched
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (courseName.isBlank() || description.isBlank() || accessKey.isBlank()) {
-                        errorMessage = "Wszystkie pola są wymagane"
-                        return@Button
-                    }
-                    onSubmit(courseName, description, accessKey) // Tutaj typy są już znane
-                }
-            ) {
-                Text("Dodaj")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+            } catch (e: Exception) {
+                Log.e("CourseList", "Błąd pobierania kursów: ${e.message}")
             }
         }
-    )
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
+        items(courses) { course ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(course.courseName, style = MaterialTheme.typography.titleMedium)
+                    course.description?.let {
+                        Spacer(Modifier.height(4.dp))
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    Row {
+                        Button(
+                            onClick = { onAddFileClick(course) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Dodaj plik")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onDeleteFileClick(course) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Text("Usuń plik", color = MaterialTheme.colorScheme.onErrorContainer)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * Ekran do zarządzania plikami kursu (lista + usuwanie).
+ */
+
+@Composable
+fun ManageFilesScreen(
+    navController: NavHostController,
+    courseId: Long
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var files by remember { mutableStateOf<List<CourseFile>>(emptyList()) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(8.dp)
+            ) {
+                items(files) { file ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(file.fileName, style = MaterialTheme.typography.bodyLarge)
+
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        try {
+                                            val api = RetrofitClient.getInstance(context)
+                                            val resp = api.deleteCourseFile(courseId, file.id)
+                                            if (resp.isSuccessful) {
+                                                snackbarHostState.showSnackbar("Plik usunięty")
+                                                files = files.filterNot { it.id == file.id }
+                                            } else {
+                                                snackbarHostState.showSnackbar("Błąd usuwania pliku")
+                                            }
+                                        } catch (e: Exception) {
+                                            snackbarHostState.showSnackbar("Wyjątek: ${e.message}")
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
+                            ) {
+                                Text("Usuń", color = MaterialTheme.colorScheme.onErrorContainer)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Pobierz pliki przy starcie
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val api = RetrofitClient.getInstance(context)
+                val fetchedFiles = api.getCourseFiles(courseId)
+                files = fetchedFiles
+            } catch (e: Exception) {
+                Log.e("ManageFiles", "Błąd pobierania plików: ${e.message}")
+            }
+        }
+    }
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -246,15 +260,7 @@ fun UserScreen(navController: NavHostController) {
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Moje kursy") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        }
+
     ) { padding ->
         Column(
             modifier = Modifier
@@ -271,3 +277,4 @@ fun UserScreen(navController: NavHostController) {
         }
     }
 }
+

@@ -32,15 +32,15 @@ class FileUploadViewModel(context: Context) : ViewModel() {
                     throw IllegalArgumentException("Plik jest zbyt duży (max 10MB)")
                 }
 
+
+                val originalName = uri.getFileName(context)
                 val requestFile = file.asRequestBody(
                     context.contentResolver.getType(uri)?.toMediaTypeOrNull()
-                        ?: "multipart/form-data".toMediaTypeOrNull()
                 )
-
                 val filePart = MultipartBody.Part.createFormData(
-                    "file",
-                    file.name,
-                    requestFile
+                    name = "file",
+                    filename = originalName,    // <<< używamy prawdziwej nazwy
+                    body = requestFile
                 )
 
                 val response = apiService.uploadFile(courseId, filePart)

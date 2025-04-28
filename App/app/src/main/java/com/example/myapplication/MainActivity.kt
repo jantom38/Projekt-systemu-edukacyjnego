@@ -7,7 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
 import com.example.myapplication.AccessKeyScreen
 import com.example.myapplication.LoginScreen
 import com.example.myapplication.CourseListScreen
@@ -35,6 +37,14 @@ fun EduApp() {
         composable("courses") { CourseListScreen(navController) }
         composable("user") { UserScreen(navController) }
         composable("teacher") { TeacherScreen(navController) }
+        composable(
+            "manage_files/{courseId}",
+            arguments = listOf(navArgument("courseId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
+            ManageFilesScreen(navController = navController, courseId = courseId)
+        }
+
 
         // Wspólne trasy dla wszystkich użytkowników
         composable("access_key/{courseId}") { backStackEntry ->
