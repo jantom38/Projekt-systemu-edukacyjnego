@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.net.URLConnection
 
 data class CourseFile(
     val id: Long,
@@ -152,17 +153,33 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
 
 @Composable
 fun FileCard(file: CourseFile, context: Context) {
+    // 1. Pełny URL do pliku na serwerze
+    val baseUrl = "http://10.0.2.2:8080"
+    val fullUrl = "$baseUrl${file.fileUrl}"
+
+    // 2. MIME type na podstawie nazwy pliku
+    val mimeType = URLConnection
+        .guessContentTypeFromName(file.fileName)
+        ?: "*/*"
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable {
                 try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(file.fileUrl)).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    // 3. Intent ACTION_VIEW z danymi i typem
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(Uri.parse(fullUrl), mimeType)
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                        addCategory(Intent.CATEGORY_BROWSABLE)
                     }
                     context.startActivity(intent)
                 } catch (e: Exception) {
+                    // 4. Fallback: komunikat o braku aplikacji
                     Toast.makeText(
                         context,
                         "Nie można otworzyć pliku: ${e.localizedMessage}",
@@ -174,13 +191,10 @@ fun FileCard(file: CourseFile, context: Context) {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = file.fileName,
-                style = MaterialTheme.typography.titleMedium
-            )
+            Text(text = file.fileName, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = file.fileUrl,
+                text = fullUrl,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
