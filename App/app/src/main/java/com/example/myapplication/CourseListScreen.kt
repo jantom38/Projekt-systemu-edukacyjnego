@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 // Model danych kursu
 data class Course(
-    val id: Long,
+    val id: Long = 0,
     val courseName: String,
     val description: String,
     val accessKey: String

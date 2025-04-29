@@ -37,6 +37,7 @@ fun EduApp() {
         composable("courses") { CourseListScreen(navController) }
         composable("user") { UserScreen(navController) }
         composable("teacher") { TeacherScreen(navController) }
+        composable("add_course") { AddCourseScreen(navController) }
         composable(
             "manage_files/{courseId}",
             arguments = listOf(navArgument("courseId") { type = NavType.LongType })

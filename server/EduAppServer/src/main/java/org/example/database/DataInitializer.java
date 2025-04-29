@@ -46,27 +46,27 @@ public class DataInitializer {
             teacher.setRole(UserRole.TEACHER);
             userRepository.save(teacher);
         }
+        if (userRepository.findByUsername("teacher1").isEmpty()) {
+            User teacher = new User();
+            teacher.setUsername("teacher1");
+            teacher.setPassword(passwordEncoder.encode("teacher123"));
+            teacher.setRole(UserRole.TEACHER);
+            userRepository.save(teacher);
+        }
     }
 
     private void initCourses() {
         if (courseRepository.count() == 0) {
+            User teacher = userRepository.findByUsername("teacher")
+                    .orElseThrow();
             Course course1 = new Course();
             course1.setCourseName("Java Basics");
             course1.setDescription("Introduction to Java programming");
             course1.setAccessKey("JAVA-101");
+            course1.setTeacher(teacher);
             courseRepository.save(course1);
 
-            Course course2 = new Course();
-            course2.setCourseName("Spring Boot");
-            course2.setDescription("Building web applications with Spring");
-            course2.setAccessKey("SPRING-202");
-            courseRepository.save(course2);
 
-            Course course3 = new Course();
-            course3.setCourseName("Hibernate");
-            course3.setDescription("Database access with Hibernate");
-            course3.setAccessKey("HIB-303");
-            courseRepository.save(course3);
         }
     }
 
@@ -74,14 +74,11 @@ public class DataInitializer {
         if (courseFileRepository.count() == 0) {
             Course javaCourse = courseRepository.findByCourseName("Java Basics")
                     .orElseThrow(() -> new RuntimeException("Kurs 'Java Basics' nie znaleziony!"));
-            Course springCourse = courseRepository.findByCourseName("Spring Boot")
-                    .orElseThrow(() -> new RuntimeException("Kurs 'Spring Boot' nie znaleziony!"));
-            Course hibernateCourse = courseRepository.findByCourseName("Hibernate")
-                    .orElseThrow(() -> new RuntimeException("Kurs 'Hibernate' nie znaleziony!"));
+
 
             // Spójne nazwy plików (małe litery + podkreślenia)
-            courseFileRepository.save(new CourseFile("java_intro.pdf", "http://10.0.2.2:8080/files/java_intro.pdf", javaCourse));
-            courseFileRepository.save(new CourseFile("java_exercises.zip", "http://10.0.2.2:8080/files/java_exercises.zip", javaCourse));
+            courseFileRepository.save(new CourseFile("java_intro.pdf", "/files/java_intro.pdf", javaCourse));
+            courseFileRepository.save(new CourseFile("java_exercises.zip", "/files/java_exercises.zip", javaCourse));
         }
     }
 }

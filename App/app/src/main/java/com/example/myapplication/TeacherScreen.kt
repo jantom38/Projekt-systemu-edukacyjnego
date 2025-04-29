@@ -289,5 +289,94 @@ fun UserScreen(navController: NavHostController) {
             )
         }
     }
-}
+}@Composable
+fun AddCourseScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
+    var courseName by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var accessKey by remember { mutableStateOf("") }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            // Nagłówek bez TopAppBar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Dodaj kurs", style = MaterialTheme.typography.headlineSmall)
+                TextButton(onClick = { navController.popBackStack() }) {
+                    Text("Anuluj")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = courseName,
+                onValueChange = { courseName = it },
+                label = { Text("Nazwa kursu") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Opis") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = accessKey,
+                onValueChange = { accessKey = it },
+                label = { Text("Klucz dostępu") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    scope.launch {
+                        try {
+                            val api = RetrofitClient.getInstance(context)
+                            val response = api.createCourse(
+                                Course(
+                                    courseName = courseName,
+                                    description = description,
+                                    accessKey = accessKey
+
+                                )
+                            )
+                            if (response.isSuccessful) {
+                                snackbarHostState.showSnackbar("Kurs dodany")
+                                navController.popBackStack()
+                            } else {
+                                snackbarHostState.showSnackbar("Błąd: ${response.code()}")
+                            }
+                        } catch (e: Exception) {
+                            snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Zapisz kurs")
+            }
+        }
+    }
+}
