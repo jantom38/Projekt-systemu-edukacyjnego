@@ -76,7 +76,6 @@ fun AccessKeyScreen(navController: NavHostController, courseId: Long,onSuccess: 
         }
     }
 }
-
 private fun verifyAccessKey(
     context: Context,
     courseId: Long,
@@ -87,24 +86,14 @@ private fun verifyAccessKey(
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val apiService = RetrofitClient.getInstance(context)
-            val response = apiService.verifyAccessKey(courseId, mapOf("accessKey" to accessKey))
-            if (response["success"] == true) {
+            val response = apiService.enrollInCourse(courseId, accessKey)
+            if (response.isSuccessful) {
                 withContext(Dispatchers.Main) { onSuccess() }
             } else {
-                withContext(Dispatchers.Main) { onError(response["message"] as String) }
-            }
-        } catch (e: retrofit2.HttpException) {
-            withContext(Dispatchers.Main) {
-                onError(when (e.code()) {
-                    403 -> "Nieprawidłowy klucz dostępu"
-                    404 -> "Kurs nie znaleziony"
-                    else -> "Błąd serwera: ${e.message()}"
-                })
+                withContext(Dispatchers.Main) { onError("Błąd: ${response.code()}") }
             }
         } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                onError("Błąd połączenia: ${e.message ?: "Nieznany błąd"}")
-            }
+            withContext(Dispatchers.Main) { onError("Błąd: ${e.message}") }
         }
     }
 }

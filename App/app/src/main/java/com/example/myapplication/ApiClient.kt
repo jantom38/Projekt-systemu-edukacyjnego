@@ -28,11 +28,10 @@ interface CourseApiService {
     @GET("/api/courses/{id}/files")
     suspend fun getCourseFiles(@Path("id") courseId: Long): List<CourseFile>
 
-
     @POST("/api/courses")
     suspend fun createCourse(@Body course: Course): Response<Course>
 
-        @Multipart
+    @Multipart
     @POST("/api/courses/{courseId}/files/upload")
     suspend fun uploadFile(
         @Path("courseId") courseId: Long,
@@ -44,6 +43,12 @@ interface CourseApiService {
         @Path("courseId") courseId: Long,
         @Path("fileId") fileId: Long
     ): Response<ResponseBody>
+
+    @POST("/api/enrollments/enroll/{courseId}")
+    suspend fun enrollInCourse(@Path("courseId") courseId: Long, @Body accessKey: String): Response<Void>
+
+    @GET("/api/enrollments/my-courses")
+    suspend fun getMyCourses(): List<Course>
 }
 
 // Obiekt Retrofit z interceptorem dla tokenu JWT

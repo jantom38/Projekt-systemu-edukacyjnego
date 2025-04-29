@@ -34,36 +34,17 @@ fun EduApp() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "login") {
         composable("login") { LoginScreen(navController) }
-        composable("courses") { CourseListScreen(navController) }
         composable("user") { UserScreen(navController) }
         composable("teacher") { TeacherScreen(navController) }
         composable("add_course") { AddCourseScreen(navController) }
-        composable(
-            "manage_files/{courseId}",
-            arguments = listOf(navArgument("courseId") { type = NavType.LongType })
-        ) { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
-            ManageFilesScreen(navController = navController, courseId = courseId)
-        }
-
-
-        // Wspólne trasy dla wszystkich użytkowników
+        composable("available_courses") { AvailableCoursesScreen(navController) }
+        composable("my_courses") { MyCoursesScreen(navController) }
         composable("access_key/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
             if (courseId != null) {
-                AccessKeyScreen(
-                    navController = navController,
-                    courseId = courseId,
-                    onSuccess = {
-                        // Po poprawnym wprowadzeniu klucza przejdź do plików
-                        navController.navigate("course_files/$courseId") {
-                            popUpTo("user") { inclusive = false }
-                        }
-                    }
-                )
+                AccessKeyScreen(navController, courseId)
             }
         }
-
         composable("course_files/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
             if (courseId != null) {

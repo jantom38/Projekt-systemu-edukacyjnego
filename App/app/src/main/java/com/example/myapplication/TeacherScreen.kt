@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -268,28 +270,23 @@ fun ManageFilesScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserScreen(navController: NavHostController) {
-    val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            CourseListScreen(
-                navController = navController,
-                onCourseClick = { course ->
-                    // Przekierowanie do ekranu z kluczem dostępu
-                    navController.navigate("access_key/${course.id}")
-                }
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Button(onClick = { navController.navigate("available_courses") }) {
+            Text("Dostępne kursy")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { navController.navigate("my_courses") }) {
+            Text("Moje kursy")
         }
     }
-}@Composable
+}
+@Composable
 fun AddCourseScreen(navController: NavHostController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -376,6 +373,92 @@ fun AddCourseScreen(navController: NavHostController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Zapisz kurs")
+            }
+        }
+    }
+}
+@Composable
+fun AvailableCoursesScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var courses by remember { mutableStateOf<List<Course>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val api = RetrofitClient.getInstance(context)
+                val fetched = api.getAllCourses()
+                courses = fetched
+            } catch (e: Exception) {
+                Log.e("AvailableCourses", "Błąd pobierania kursów: ${e.message}")
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("Dostępne kursy", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+        LazyColumn {
+            items(courses) { course ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .clickable { navController.navigate("access_key/${course.id}") },
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(course.courseName, style = MaterialTheme.typography.titleMedium)
+                        Text(course.description, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun MyCoursesScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var courses by remember { mutableStateOf<List<Course>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val api = RetrofitClient.getInstance(context)
+                val fetched = api.getMyCourses()
+                courses = fetched
+            } catch (e: Exception) {
+                Log.e("MyCourses", "Błąd pobierania kursów: ${e.message}")
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("Moje kursy", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+        LazyColumn {
+            items(courses) { course ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .clickable { navController.navigate("course_files/${course.id}") },
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(course.courseName, style = MaterialTheme.typography.titleMedium)
+                        Text(course.description, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         }
     }

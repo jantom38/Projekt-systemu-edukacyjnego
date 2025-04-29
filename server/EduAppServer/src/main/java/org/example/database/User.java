@@ -1,5 +1,8 @@
 package org.example.database;
+
 import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -15,7 +18,13 @@ public class User {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
-    private Integer courseId; // dla studentów - przypisanie do kursu
+    @ManyToMany
+    @JoinTable(
+            name = "user_courses",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "course_id")
+    )
+    private List<Course> enrolledCourses = new ArrayList<>();
 
     // Gettery i settery
     public Long getId() { return id; }
@@ -25,6 +34,6 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public UserRole getRole() { return role; }
     public void setRole(UserRole role) { this.role = role; }
-    public Integer getCourseId() { return courseId; }
-    public void setCourseId(Integer courseId) { this.courseId = courseId; }
+    public List<Course> getEnrolledCourses() { return enrolledCourses; }
+    public void setEnrolledCourses(List<Course> enrolledCourses) { this.enrolledCourses = enrolledCourses; }
 }
