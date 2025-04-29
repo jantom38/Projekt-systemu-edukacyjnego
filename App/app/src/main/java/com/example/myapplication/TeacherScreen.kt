@@ -170,7 +170,6 @@ fun CourseListScreen(
 /**
  * Ekran do zarządzania plikami kursu (lista + usuwanie).
  */
-
 @Composable
 fun ManageFilesScreen(
     navController: NavHostController,
@@ -181,9 +180,21 @@ fun ManageFilesScreen(
     var files by remember { mutableStateOf<List<CourseFile>>(emptyList()) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+    // Funkcja do odświeżania listy plików
+    fun loadFiles() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val api = RetrofitClient.getInstance(context)
+                val fetchedFiles = api.getCourseFiles(courseId)
+                files = fetchedFiles
+            } catch (e: Exception) {
+                Log.e("ManageFiles", "Błąd pobierania plików: ${e.message}")
+            }
+        }
+    }
 
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -194,7 +205,10 @@ fun ManageFilesScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(8.dp)
             ) {
-                items(files) { file ->
+                items(
+                    items = files,
+                    key = { it.id } // Dodaj klucze dla lepszego śledzenia elementów
+                ) { file ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -216,13 +230,20 @@ fun ManageFilesScreen(
                                             val api = RetrofitClient.getInstance(context)
                                             val resp = api.deleteCourseFile(courseId, file.id)
                                             if (resp.isSuccessful) {
-                                                snackbarHostState.showSnackbar("Plik usunięty")
+                                                // Optymistyczna aktualizacja UI
                                                 files = files.filterNot { it.id == file.id }
+                                                snackbarHostState.showSnackbar("Plik usunięty")
+
+                                                // Wymuś ponowne załadowanie danych z serwera
+                                                loadFiles()
                                             } else {
                                                 snackbarHostState.showSnackbar("Błąd usuwania pliku")
+                                                // Przywróć plik jeśli serwer zwrócił błąd
+                                                loadFiles()
                                             }
                                         } catch (e: Exception) {
                                             snackbarHostState.showSnackbar("Wyjątek: ${e.message}")
+                                            loadFiles()
                                         }
                                     }
                                 },
@@ -241,15 +262,7 @@ fun ManageFilesScreen(
 
     // Pobierz pliki przy starcie
     LaunchedEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
-            try {
-                val api = RetrofitClient.getInstance(context)
-                val fetchedFiles = api.getCourseFiles(courseId)
-                files = fetchedFiles
-            } catch (e: Exception) {
-                Log.e("ManageFiles", "Błąd pobierania plików: ${e.message}")
-            }
-        }
+        loadFiles()
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)

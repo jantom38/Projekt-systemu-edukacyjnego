@@ -29,14 +29,16 @@ interface CourseApiService {
     suspend fun getCourseFiles(@Path("id") courseId: Long): List<CourseFile>
 
 
-        @POST("/api/courses")
-        suspend fun createCourse(@Body course: Course): Response<Course>
-    @Multipart
+    @POST("/api/courses")
+    suspend fun createCourse(@Body course: Course): Response<Course>
+
+        @Multipart
     @POST("/api/courses/{courseId}/files/upload")
     suspend fun uploadFile(
         @Path("courseId") courseId: Long,
         @Part file: MultipartBody.Part
     ): Response<ResponseBody>
+
     @DELETE("/api/courses/{courseId}/files/{fileId}")
     suspend fun deleteCourseFile(
         @Path("courseId") courseId: Long,

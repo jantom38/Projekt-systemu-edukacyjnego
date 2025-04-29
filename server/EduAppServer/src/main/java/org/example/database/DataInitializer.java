@@ -31,11 +31,11 @@ public class DataInitializer {
     }
 
     private void initUsers() {
-        if (userRepository.findByUsername("admin").isEmpty()) {
+        if (userRepository.findByUsername("user").isEmpty()) {
             User admin = new User();
-            admin.setUsername("admin");
-            admin.setPassword(passwordEncoder.encode("password123"));
-            admin.setRole(UserRole.ADMIN);
+            admin.setUsername("user");
+            admin.setPassword(passwordEncoder.encode("password"));
+            admin.setRole(UserRole.STUDENT);
             userRepository.save(admin);
         }
 

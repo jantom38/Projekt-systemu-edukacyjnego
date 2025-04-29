@@ -81,7 +81,7 @@ public class FileUploadController {
             // 6. Zapis metadanych w bazie
             CourseFile courseFile = new CourseFile();
             courseFile.setFileName(originalFileName);
-            courseFile.setFileUrl("/uploads/" + uniqueFileName); // Upewnij się że to pasuje do Twojej konfiguracji
+            courseFile.setFileUrl("/files/" + uniqueFileName); // Upewnij się że to pasuje do Twojej konfiguracji
             courseFile.setCourse(course);
 
             CourseFile savedFile = courseFileRepository.save(courseFile);
