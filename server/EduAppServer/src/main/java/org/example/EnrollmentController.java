@@ -28,6 +28,7 @@ public class EnrollmentController {
     public ResponseEntity<String> enrollInCourse(@PathVariable Long courseId, @RequestBody String accessKey) {
         // Logowanie początku operacji
         LOGGER.info("Próba zapisu na kurs o ID: " + courseId);
+        accessKey = accessKey.replace("\"", "").trim();
 
         // Pobranie nazwy zalogowanego użytkownika
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
