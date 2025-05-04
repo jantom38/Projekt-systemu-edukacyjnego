@@ -179,7 +179,6 @@ fun FileCard(file: CourseFile, context: Context) {
                     }
                     context.startActivity(intent)
                 } catch (e: Exception) {
-                    // 4. Fallback: komunikat o braku aplikacji
                     Toast.makeText(
                         context,
                         "Nie można otworzyć pliku: ${e.localizedMessage}",

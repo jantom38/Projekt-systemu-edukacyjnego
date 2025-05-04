@@ -44,6 +44,8 @@ interface CourseApiService {
         @Path("courseId") courseId: Long,
         @Path("fileId") fileId: Long
     ): Response<ResponseBody>
+       @GET("/api/courses/my-courses")
+       suspend fun getUserCourses(): Map<String, Any>
 }
 
 // Obiekt Retrofit z interceptorem dla tokenu JWT

@@ -80,7 +80,7 @@ fun LoginScreen(navController: NavHostController) {
                             "TEACHER" -> navController.navigate("teacher") {
                                 popUpTo("login") { inclusive = true }
                             }
-                            else -> navController.navigate("user") {
+                            else -> navController.navigate("menu") {
                                 popUpTo("login") { inclusive = true }
                             }
                         }

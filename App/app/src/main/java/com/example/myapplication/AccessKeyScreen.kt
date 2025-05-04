@@ -1,4 +1,6 @@
+// AccessKeyScreen.kt
 package com.example.myapplication
+
 import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -8,102 +10,104 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.CoroutineScope
+import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 @Composable
-fun AccessKeyScreen(navController: NavHostController, courseId: Long,onSuccess: () -> Unit = { navController.navigate("course_files/$courseId") } ) {
-    val context = LocalContext.current
-    var accessKey by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Wprowadź klucz dostępu do kursu",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        TextField(
-            value = accessKey,
-            onValueChange = { accessKey = it },
-            label = { Text("Klucz dostępu") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = {
-                isLoading = true
-                verifyAccessKey(
-                    context = context,
-                    courseId = courseId,
-                    accessKey = accessKey,
-                    onSuccess = {
-                        isLoading = false
-                        navController.navigate("course_files/$courseId") {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                        }
-                    },
-                    onError = { message ->
-                        isLoading = false
-                        errorMessage = message
-                    }
-                )
-            },
-            enabled = !isLoading && accessKey.isNotBlank()
-        ) {
-            Text("Zweryfikuj klucz")
-        }
-        if (errorMessage != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = errorMessage!!,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-        if (isLoading) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CircularProgressIndicator()
-        }
-    }
-}
-
-private fun verifyAccessKey(
-    context: Context,
+fun AccessKeyScreen(
+    navController: NavHostController,
     courseId: Long,
-    accessKey: String,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
+    onSuccess: () -> Unit
 ) {
-    CoroutineScope(Dispatchers.IO).launch {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHost = remember { SnackbarHostState() }
+
+    var accessKey by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var alreadyEnrolled by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        isLoading = true
         try {
-            val apiService = RetrofitClient.getInstance(context)
-            val response = apiService.verifyAccessKey(courseId, mapOf("accessKey" to accessKey))
-            if (response["success"] == true) {
-                withContext(Dispatchers.Main) { onSuccess() }
+            val response = RetrofitClient.getInstance(context).getUserCourses(
+                "Bearer " + context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    .getString("jwt_token", "")!!
+            )
+            if (response.isSuccessful) {
+                val courses = response.body()?.courses ?: emptyList()
+                if (courses.any { it.id == courseId }) {
+                    alreadyEnrolled = true
+                    snackbarHost.showSnackbar("Jesteś już zapisany do tego kursu.")
+                    onSuccess()
+                }
             } else {
-                withContext(Dispatchers.Main) { onError(response["message"] as String) }
-            }
-        } catch (e: retrofit2.HttpException) {
-            withContext(Dispatchers.Main) {
-                onError(when (e.code()) {
-                    403 -> "Nieprawidłowy klucz dostępu"
-                    404 -> "Kurs nie znaleziony"
-                    else -> "Błąd serwera: ${e.message()}"
-                })
+                snackbarHost.showSnackbar("Błąd przy sprawdzaniu kursów użytkownika.")
             }
         } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                onError("Błąd połączenia: ${e.message ?: "Nieznany błąd"}")
+            snackbarHost.showSnackbar("Błąd sieci: ${e.localizedMessage}")
+        } finally {
+            isLoading = false
+        }
+    }
+
+    if (alreadyEnrolled) return
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) }
+    ) { padding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .padding(padding),
+            verticalArrangement = Arrangement.Center
+        ) {
+            OutlinedTextField(
+                value = accessKey,
+                onValueChange = { accessKey = it },
+                label = { Text("Klucz dostępu") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    isLoading = true
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            val resp: Map<String, Any> =
+                                RetrofitClient.getInstance(context)
+                                    .verifyAccessKey(
+                                        courseId,
+                                        mapOf("accessKey" to accessKey)
+                                    )
+                            val success = resp["success"] as? Boolean ?: false
+                            val msg = resp["message"] as? String ?: "Nieznana odpowiedź"
+
+                            withContext(Dispatchers.Main) {
+                                snackbarHost.showSnackbar(msg)
+                                if (success) {
+                                    onSuccess()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                snackbarHost.showSnackbar("Błąd: ${e.localizedMessage}")
+                            }
+                        } finally {
+                            isLoading = false
+                        }
+                    }
+                },
+                enabled = accessKey.isNotBlank() && !isLoading,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(Modifier.size(20.dp))
+                } else {
+                    Text("Potwierdź klucz")
+                }
             }
         }
     }

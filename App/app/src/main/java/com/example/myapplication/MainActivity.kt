@@ -47,23 +47,23 @@ fun EduApp() {
         }
 
 
-        // Wspólne trasy dla wszystkich użytkowników
+        composable("my_courses") { MyCoursesScreen(navController) }
+        composable("course_files/{courseId}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("courseId")!!.toLong()
+            CourseFilesScreen(navController, id)
+        }
         composable("access_key/{courseId}") { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
-            if (courseId != null) {
-                AccessKeyScreen(
-                    navController = navController,
-                    courseId = courseId,
-                    onSuccess = {
-                        // Po poprawnym wprowadzeniu klucza przejdź do plików
-                        navController.navigate("course_files/$courseId") {
-                            popUpTo("user") { inclusive = false }
-                        }
-                    }
-                )
+            val id = backStackEntry.arguments?.getString("courseId")!!.toLong()
+            AccessKeyScreen(navController, courseId = id) {
+                navController.popBackStack("menu", false)
             }
         }
-
+        composable("menu") {
+            MenuScreen(navController)
+        }
+        composable("available_courses") {
+            UserScreen(navController)
+        }
         composable("course_files/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toLongOrNull()
             if (courseId != null) {
