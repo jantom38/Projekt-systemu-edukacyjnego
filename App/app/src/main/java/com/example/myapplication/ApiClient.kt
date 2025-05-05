@@ -49,7 +49,7 @@ interface CourseApiService {
     @POST("/api/courses/{id}/quizzes")
     suspend fun createQuiz(@Path("id") courseId: Long, @Body quiz: Quiz): Response<Map<String, Any>>
 
-    @POST("/api/quizzes/{quizId}/questions")
+    @POST("/api/courses/quizzes/{quizId}/questions")
     suspend fun createQuizQuestion(@Path("quizId") quizId: Long, @Body question: QuizQuestion): Response<Map<String, Any>>
 }
 

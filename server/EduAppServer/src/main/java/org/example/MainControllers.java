@@ -2,10 +2,7 @@ package org.example;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.DataBaseRepositories.*;
-import org.example.database.Course;
-import org.example.database.Quiz;
-import org.example.database.User;
-import org.example.database.UserCourse;
+import org.example.database.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -36,18 +33,22 @@ public class MainControllers {
     private final UserRepository userRepository;
     private final QuizRepository quizRepository;
     private final UserCourseRepository userCourseRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
+
+
 
     @Autowired
     public MainControllers(CourseRepository courseRepository,
                            CourseFileRepository courseFileRepository,
                            UserRepository userRepository,
-                           QuizRepository quizRepository, UserCourseRepository userCourseRepository) {
+                           QuizRepository quizRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository) {
         this.courseRepository = courseRepository;
         this.courseFileRepository = courseFileRepository;
         this.userRepository = userRepository;
         this.quizRepository = quizRepository;
 
         this.userCourseRepository = userCourseRepository;
+        this.quizQuestionRepository = quizQuestionRepository;
     }
 
     private String currentUsername() {
@@ -174,13 +175,14 @@ public class MainControllers {
                 .orElse(ResponseEntity.status(404)
                         .body(Map.of("success", false, "message", "File not found for this course")));
     }
-
     @GetMapping("/{id}/quizzes")
     public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
+        log.info("Pobieranie quizów dla kursu ID: {}", id);
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (isTeacher(auth)) {
             boolean owns = courseRepository.findByIdAndTeacherUsername(id, currentUsername()).isPresent();
             if (!owns) {
+                log.warn("Nauczyciel {} próbował uzyskać dostęp do quizów kursu ID: {} bez uprawnień", currentUsername(), id);
                 return ResponseEntity.status(403).body(Map.of(
                         "success", false,
                         "message", "Brak dostępu do tego kursu"));
@@ -188,12 +190,14 @@ public class MainControllers {
         }
 
         if (!courseRepository.existsById(id)) {
+            log.error("Kurs ID: {} nie znaleziony", id);
             return ResponseEntity.status(404).body(Map.of(
                     "success", false,
                     "message", "Course not found"));
         }
 
         List<Quiz> quizzes = quizRepository.findByCourseId(id);
+        log.info("Pobrano {} quizów dla kursu ID: {}", quizzes.size(), id);
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "quizzes", quizzes
@@ -203,7 +207,9 @@ public class MainControllers {
     @PostMapping("/{id}/quizzes")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> addQuiz(@PathVariable Long id, @RequestBody Quiz quiz) {
+        log.info("Próba dodania quizu do kursu ID: {} przez nauczyciela {}", id, currentUsername());
         if (quiz.getTitle() == null || quiz.getTitle().isBlank()) {
+            log.warn("Próba dodania quizu z pustym tytułem dla kursu ID: {}", id);
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Tytuł quizu jest wymagany"));
         }
@@ -212,14 +218,56 @@ public class MainControllers {
                 .map(course -> {
                     quiz.setCourse(course);
                     Quiz savedQuiz = quizRepository.save(quiz);
+                    log.info("Quiz '{}' (ID: {}) dodany do kursu ID: {}", savedQuiz.getTitle(), savedQuiz.getId(), id);
                     return ResponseEntity.ok(Map.of(
                             "success", true,
                             "message", "Quiz added successfully",
                             "quiz", savedQuiz
                     ));
                 })
-                .orElse(ResponseEntity.status(403)
-                        .body(Map.of("success", false, "message", "Brak dostępu do tego kursu lub kurs nie istnieje")));
+                .orElseGet(() -> {
+                    log.error("Brak dostępu do kursu ID: {} lub kurs nie istnieje dla nauczyciela {}", id, currentUsername());
+                    return ResponseEntity.status(403)
+                            .body(Map.of("success", false, "message", "Brak dostępu do tego kursu lub kurs nie istnieje"));
+                });
+    }
+    @PostMapping("/quizzes/{quizId}/questions")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> addQuizQuestion(@PathVariable Long quizId, @RequestBody QuizQuestion question) {
+        log.info("Próba dodania pytania do quizu ID: {} przez nauczyciela {}", quizId, currentUsername());
+        if (question.getQuestionText() == null || question.getQuestionText().isBlank()) {
+            log.warn("Próba dodania pytania z pustą treścią do quizu ID: {}", quizId);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Treść pytania jest wymagana"));
+        }
+        if (question.getCorrectAnswer() == null || question.getCorrectAnswer().isBlank()) {
+            log.warn("Próba dodania pytania bez poprawnej odpowiedzi do quizu ID: {}", quizId);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Poprawna odpowiedź jest wymagana"));
+        }
+
+        return quizRepository.findById(quizId)
+                .map(quiz -> {
+                    Course course = quiz.getCourse();
+                    if (!course.getTeacher().getUsername().equals(currentUsername())) {
+                        log.warn("Nauczyciel {} próbował dodać pytanie do quizu ID: {} bez uprawnień", currentUsername(), quizId);
+                        return ResponseEntity.status(403)
+                                .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
+                    }
+                    question.setQuiz(quiz);
+                    QuizQuestion savedQuestion = quizQuestionRepository.save(question);
+                    log.info("Pytanie '{}' (ID: {}) dodane do quizu ID: {}", savedQuestion.getQuestionText(), savedQuestion.getId(), quizId);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "Question added successfully",
+                            "question", savedQuestion
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.error("Quiz ID: {} nie znaleziony", quizId);
+                    return ResponseEntity.status(404)
+                            .body(Map.of("success", false, "message", "Quiz not found"));
+                });
     }
 
     @GetMapping("/my-courses")
