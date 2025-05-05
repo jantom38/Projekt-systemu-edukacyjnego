@@ -18,7 +18,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 
-// Model danych kursu
 data class Course(
     val id: Long = 0,
     val courseName: String,
@@ -26,7 +25,23 @@ data class Course(
     val accessKey: String
 )
 
-// ViewModel do zarządzania kursami
+data class Quiz(
+    val id: Long = 0,
+    val title: String,
+    val description: String?,
+    val createdAt: String? = null
+)
+
+data class QuizQuestion(
+    val id: Long = 0,
+    val questionText: String,
+    val correctAnswer: String,
+    val optionA: String?,
+    val optionB: String?,
+    val optionC: String?,
+    val optionD: String?
+)
+
 class CourseViewModel(context: Context) : ViewModel() {
     private val _courses = mutableStateOf<List<Course>>(emptyList())
     val courses: State<List<Course>> = _courses
@@ -49,17 +64,17 @@ class CourseViewModel(context: Context) : ViewModel() {
             try {
                 _courses.value = apiService.getAllCourses()
                 _error.value = null
-                Log.d("CourseViewModel", "Courses loaded successfully: ${_courses.value}")
+                Log.d("CourseViewModel", "Kursy załadowane: ${_courses.value}")
             } catch (e: retrofit2.HttpException) {
                 _error.value = when (e.code()) {
                     401 -> "Brak autoryzacji. Zaloguj się ponownie."
                     403 -> "Brak uprawnień do kursów."
                     else -> "Błąd serwera: ${e.code()} - ${e.message()}"
                 }
-                Log.e("CourseViewModel", "HTTP error: ${_error.value}")
+                Log.e("CourseViewModel", "Błąd HTTP: ${_error.value}")
             } catch (e: Exception) {
                 _error.value = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("CourseViewModel", "Connection error: ${_error.value}")
+                Log.e("CourseViewModel", "Błąd połączenia: ${_error.value}")
             } finally {
                 _isLoading.value = false
             }
@@ -67,11 +82,10 @@ class CourseViewModel(context: Context) : ViewModel() {
     }
 }
 
-// Ekran listy kursów
 @Composable
 fun CourseListScreen(
     navController: NavHostController,
-    onCourseClick: (Course) -> Unit = {} // Dodajemy nowy parametr
+    onCourseClick: (Course) -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: CourseViewModel = viewModel(factory = object : ViewModelProvider.Factory {
@@ -79,6 +93,9 @@ fun CourseListScreen(
             return CourseViewModel(context) as T
         }
     })
+    LaunchedEffect(key1 = navController.currentBackStackEntry) {
+        viewModel.loadCourses()
+    }
     val courses by viewModel.courses
     val isLoading by viewModel.isLoading
     val error by viewModel.error
@@ -144,7 +161,8 @@ fun CourseListScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp)
                                 .clickable {
-                                    onCourseClick(course) // Używamy nowego parametru
+                                    Log.d("CourseList", "Kliknięto kurs: ${course.id}")
+                                    onCourseClick(course)
                                 },
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {

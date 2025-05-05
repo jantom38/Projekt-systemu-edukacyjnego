@@ -40,7 +40,6 @@ fun MenuScreen(navController: NavHostController) {
                 Text("Twoje kursy")
             }
 
-            // --- nowy przycisk Wyloguj ---
             Button(
                 onClick = {
                     // 1. Usuń token z SharedPreferences

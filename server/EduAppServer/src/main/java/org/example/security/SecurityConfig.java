@@ -28,15 +28,8 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()  // Zezwól na logowanie
-                        .requestMatchers("/api/courses/**").authenticated()  // Wymagaj uwierzytelnienia dla kursów
-                        .requestMatchers("/files/**").permitAll()
-                        .requestMatchers("/" + uploadDir + "/**").permitAll() // Zezwól na dostęp do plików
-                        .requestMatchers(HttpMethod.POST, "/api/courses/**/files/upload").hasRole("TEACHER")
-                        .requestMatchers(HttpMethod.POST, "/api/courses/**/files/upload").hasRole("TEACHER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/courses/*/files/*").hasRole("TEACHER")
 
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
