@@ -1,5 +1,6 @@
 package org.example;
 
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.example.DataBaseRepositories.*;
 import org.example.database.*;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -214,90 +216,62 @@ public ResponseEntity<?> deleteCourse(@PathVariable Long id) {
 ///
 ///
 
-@GetMapping("/{courseId}/quizzes")
-public ResponseEntity<?> getQuizzesForCourse(@PathVariable Long courseId) {
-    log.info("Pobieranie quizów dla kursu ID: {}", courseId);
+@GetMapping("/{id}/quizzes")
+public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
+    log.info("Pobieranie quizów dla kursu ID: {}", id);
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (isTeacher(auth)) {
-        boolean owns = courseRepository.findByIdAndTeacherUsername(courseId, currentUsername()).isPresent();
+        boolean owns = courseRepository.findByIdAndTeacherUsername(id, currentUsername()).isPresent();
         if (!owns) {
-            log.warn("Nauczyciel {} próbował uzyskać dostęp do quizów kursu ID: {} bez uprawnień", currentUsername(), courseId);
+            log.warn("Nauczyciel {} próbował uzyskać dostęp do quizów kursu ID: {} bez uprawnień", currentUsername(), id);
             return ResponseEntity.status(403).body(Map.of(
                     "success", false,
                     "message", "Brak dostępu do tego kursu"));
         }
-    } else {
-        User user = userRepository.findByUsername(currentUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        boolean enrolled = userCourseRepository.existsByUserIdAndCourseId(user.getId(), courseId);
-        if (!enrolled) {
-            return ResponseEntity.status(403).body(Map.of(
-                    "success", false,
-                    "message", "Nie jesteś zapisany na ten kurs"));
-        }
     }
 
-    if (!courseRepository.existsById(courseId)) {
-        log.error("Kurs ID: {} nie znaleziony", courseId);
+    if (!courseRepository.existsById(id)) {
+        log.error("Kurs ID: {} nie znaleziony", id);
         return ResponseEntity.status(404).body(Map.of(
                 "success", false,
                 "message", "Course not found"));
     }
 
-    List<Quiz> quizzes = quizRepository.findByCourseId(courseId);
-    log.info("Pobrano {} quizów dla kursu ID: {}", quizzes.size(), courseId);
+    List<Quiz> quizzes = quizRepository.findByCourseId(id);
+    log.info("Pobrano {} quizów dla kursu ID: {}", quizzes.size(), id);
     return ResponseEntity.ok(Map.of(
             "success", true,
             "quizzes", quizzes
     ));
 }
 
-@PostMapping("/{courseId}/quizzes")
-@PreAuthorize("hasRole('TEACHER')")
-public ResponseEntity<?> addQuizToCourse(@PathVariable Long courseId, @RequestBody Quiz quiz) {
-    log.info("Próba dodania quizu do kursu ID: {} przez nauczyciela {}", courseId, currentUsername());
-    if (quiz.getTitle() == null || quiz.getTitle().isBlank()) {
-        log.warn("Próba dodania quizu z pustym tytułem dla kursu ID: {}", courseId);
-        return ResponseEntity.badRequest()
-                .body(Map.of("success", false, "message", "Tytuł quizu jest wymagany"));
+    @PostMapping("/{id}/quizzes")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> addQuiz(@PathVariable Long id, @RequestBody Quiz quiz) {
+        log.info("Próba dodania quizu do kursu ID: {} przez nauczyciela {}", id, currentUsername());
+        if (quiz.getTitle() == null || quiz.getTitle().isBlank()) {
+            log.warn("Próba dodania quizu z pustym tytułem dla kursu ID: {}", id);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Tytuł quizu jest wymagany"));
+        }
+
+        return courseRepository.findByIdAndTeacherUsername(id, currentUsername())
+                .map(course -> {
+                    quiz.setCourse(course);
+                    Quiz savedQuiz = quizRepository.save(quiz);
+                    log.info("Quiz '{}' (ID: {}) dodany do kursu ID: {}", savedQuiz.getTitle(), savedQuiz.getId(), id);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "Quiz added successfully",
+                            "quiz", savedQuiz
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.error("Brak dostępu do kursu ID: {} lub kurs nie istnieje dla nauczyciela {}", id, currentUsername());
+                    return ResponseEntity.status(403)
+                            .body(Map.of("success", false, "message", "Brak dostępu do tego kursu lub kurs nie istnieje"));
+                });
     }
-
-    return courseRepository.findByIdAndTeacherUsername(courseId, currentUsername())
-            .map(course -> {
-                quiz.setCourse(course);
-                Quiz savedQuiz = quizRepository.save(quiz);
-                log.info("Quiz '{}' (ID: {}) dodany do kursu ID: {}", savedQuiz.getTitle(), savedQuiz.getId(), courseId);
-                return ResponseEntity.ok(Map.of(
-                        "success", true,
-                        "message", "Quiz added successfully",
-                        "quiz", savedQuiz
-                ));
-            })
-            .orElseGet(() -> {
-                log.error("Brak dostępu do kursu ID: {} lub kurs nie istnieje dla nauczyciela {}", courseId, currentUsername());
-                return ResponseEntity.status(403)
-                        .body(Map.of("success", false, "message", "Brak dostępu do tego kursu lub kurs nie istnieje"));
-            });
-}
-
-@GetMapping("/quizzes/{quizId}/questions")
-public ResponseEntity<?> getQuestionsForQuiz(@PathVariable Long quizId) {
-    log.info("Pobieranie pytań dla quizu ID: {}", quizId);
-    return quizRepository.findById(quizId)
-            .map(quiz -> {
-                List<QuizQuestion> questions = quizQuestionRepository.findByQuizId(quizId);
-                return ResponseEntity.ok(Map.of(
-                        "success", true,
-                        "questions", questions
-                ));
-            })
-            .orElseGet(() -> {
-                log.error("Quiz ID: {} nie znaleziony", quizId);
-                return ResponseEntity.status(404)
-                        .body(Map.of("success", false, "message", "Quiz not found"));
-            });
-}
-
 
     @PostMapping("/quizzes/{quizId}/questions")
     @PreAuthorize("hasRole('TEACHER')")
@@ -316,22 +290,48 @@ public ResponseEntity<?> getQuestionsForQuiz(@PathVariable Long quizId) {
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Typ pytania musi być 'multiple_choice', 'open_ended' lub 'true_false'"));
         }
-        if (question.getQuestionType().equals("multiple_choice") || question.getQuestionType().equals("true_false")) {
-            if (question.getOptions() == null || question.getOptions().isEmpty()) {
-                log.warn("Brak opcji dla pytania wielokrotnego wyboru lub prawda/fałsz w quizie ID: {}", quizId);
+        if (question.getQuestionType().equals("multiple_choice")) {
+            if (question.getOptions() == null || question.getOptions().size() < 2) {
+                log.warn("Za mało opcji dla pytania wielokrotnego wyboru w quizie ID: {}", quizId);
                 return ResponseEntity.badRequest()
-                        .body(Map.of("success", false, "message", "Opcje są wymagane dla pytań wielokrotnego wyboru lub prawda/fałsz"));
+                        .body(Map.of("success", false, "message", "Pytania wielokrotnego wyboru wymagają co najmniej 2 opcji"));
             }
-            if (question.getCorrectAnswer() == null || !question.getOptions().containsKey(question.getCorrectAnswer())) {
-                log.warn("Nieprawidłowa poprawna odpowiedź dla pytania w quizie ID: {}", quizId);
+            if (question.getCorrectAnswer() == null || question.getCorrectAnswer().isBlank()) {
+                log.warn("Brak poprawnej odpowiedzi dla pytania wielokrotnego wyboru w quizie ID: {}", quizId);
                 return ResponseEntity.badRequest()
-                        .body(Map.of("success", false, "message", "Poprawna odpowiedź musi być jednym z kluczy opcji"));
+                        .body(Map.of("success", false, "message", "Co najmniej jedna poprawna odpowiedź jest wymagana"));
             }
-            if (question.getQuestionType().equals("true_false")) {
-                if (!question.getOptions().keySet().equals(Set.of("True", "False"))) {
-                    log.warn("Nieprawidłowe opcje dla pytania prawda/fałsz w quizie ID: {}", quizId);
+            List<String> correctAnswers = Arrays.asList(question.getCorrectAnswer().split(","));
+            for (String correct : correctAnswers) {
+                if (!question.getOptions().containsKey(correct)) {
+                    log.warn("Nieprawidłowa poprawna odpowiedź '{}' dla pytania wielokrotnego wyboru w quizie ID: {}", correct, quizId);
                     return ResponseEntity.badRequest()
-                            .body(Map.of("success", false, "message", "Opcje dla pytania prawda/fałsz muszą być 'True' i 'False'"));
+                            .body(Map.of("success", false, "message", "Wszystkie poprawne odpowiedzi muszą być kluczami opcji"));
+                }
+            }
+        } else if (question.getQuestionType().equals("true_false")) {
+            if (question.getOptions() == null ||
+                    !question.getOptions().entrySet().equals(
+                            Set.of(
+                                    Map.entry("True", "Prawda"),
+                                    Map.entry("False", "Fałsz")
+                            )
+                    )) {
+                log.warn("Nieprawidłowe opcje dla pytania prawda/fałsz w quizie ID: {}", quizId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Opcje dla pytania prawda/fałsz muszą być dokładnie 'True: Prawda' i 'False: Fałsz'"));
+            }
+            if (question.getCorrectAnswer() == null || question.getCorrectAnswer().isBlank()) {
+                log.warn("Brak poprawnej odpowiedzi dla pytania prawda/fałsz w quizie ID: {}", quizId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Co najmniej jedna poprawna odpowiedź jest wymagana"));
+            }
+            List<String> correctAnswers = Arrays.asList(question.getCorrectAnswer().split(","));
+            for (String correct : correctAnswers) {
+                if (!Set.of("True", "False").contains(correct)) {
+                    log.warn("Nieprawidłowa poprawna odpowiedź '{}' dla pytania prawda/fałsz w quizie ID: {}", correct, quizId);
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("success", false, "message", "Poprawne odpowiedzi muszą być 'True' lub 'False'"));
                 }
             }
         } else if (question.getQuestionType().equals("open_ended")) {
@@ -339,6 +339,11 @@ public ResponseEntity<?> getQuestionsForQuiz(@PathVariable Long quizId) {
                 log.warn("Brak poprawnej odpowiedzi dla pytania otwartego w quizie ID: {}", quizId);
                 return ResponseEntity.badRequest()
                         .body(Map.of("success", false, "message", "Poprawna odpowiedź jest wymagana dla pytań otwartych"));
+            }
+            if (question.getOptions() != null && !question.getOptions().isEmpty()) {
+                log.warn("Opcje nie są dozwolone dla pytania otwartego w quizie ID: {}", quizId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Pytania otwarte nie mogą zawierać opcji"));
             }
         }
 
@@ -365,4 +370,33 @@ public ResponseEntity<?> getQuestionsForQuiz(@PathVariable Long quizId) {
                             .body(Map.of("success", false, "message", "Quiz not found"));
                 });
     }
+
+    @DeleteMapping("/quizzes/{quizId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Transactional
+    public ResponseEntity<?> deleteQuiz(@PathVariable Long quizId) {
+        log.info("Próba usunięcia quizu ID: {} przez nauczyciela {}", quizId, currentUsername());
+        return quizRepository.findById(quizId)
+                .map(quiz -> {
+                    Course course = quiz.getCourse();
+                    if (!course.getTeacher().getUsername().equals(currentUsername())) {
+                        log.warn("Nauczyciel {} próbował usunąć quiz ID: {} bez uprawnień", currentUsername(), quizId);
+                        return ResponseEntity.status(403)
+                                .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
+                    }
+                    quizQuestionRepository.deleteByQuizId(quizId);
+                    quizRepository.delete(quiz);
+                    log.info("Quiz ID: {} usunięty pomyślnie", quizId);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "Quiz deleted successfully"
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.error("Quiz ID: {} nie znaleziony", quizId);
+                    return ResponseEntity.status(404)
+                            .body(Map.of("success", false, "message", "Quiz not found"));
+                });
+    }
+
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.URLConnection
@@ -81,6 +84,37 @@ class CourseDetailsViewModel(context: Context, private val courseId: Long) : Vie
             }
         }
     }
+
+    fun deleteQuiz(quizId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                Log.d("CourseDetails", "Próba usunięcia quizu ID: $quizId")
+                val response = apiService.deleteQuiz(quizId)
+                if (response.isSuccessful && response.body()?.success == true) {
+                    Log.d("CourseDetails", "Quiz ID: $quizId usunięty pomyślnie")
+                    onSuccess()
+                    loadContent() // Odśwież listę quizów
+                } else {
+                    val errorMessage = response.body()?.message ?: "Błąd serwera: ${response.code()}"
+                    Log.e("CourseDetails", "Błąd usuwania quizu ID: $quizId, kod: ${response.code()}, wiadomość: $errorMessage")
+                    onError(errorMessage)
+                }
+            } catch (e: HttpException) {
+                val errorMessage = when (e.code()) {
+                    401 -> "Brak autoryzacji"
+                    403 -> "Brak uprawnień do usunięcia quizu"
+                    404 -> "Quiz nie znaleziony"
+                    else -> "Błąd serwera: ${e.code()}"
+                }
+                Log.e("CourseDetails", "HTTP error przy usuwaniu quizu ID: $quizId", e)
+                onError(errorMessage)
+            } catch (e: Exception) {
+                val errorMessage = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
+                Log.e("CourseDetails", "Network error przy usuwaniu quizu ID: $quizId", e)
+                onError(errorMessage)
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,6 +131,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
     }
     val snackbarHostState = remember { SnackbarHostState() }
     var showFilePicker by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val fileUploadViewModel: FileUploadViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -249,16 +284,50 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                                         .padding(vertical = 8.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(
-                                            text = quiz.title,
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
-                                        quiz.description?.let {
-                                            Spacer(modifier = Modifier.height(4.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
                                             Text(
-                                                text = it,
-                                                style = MaterialTheme.typography.bodyMedium
+                                                text = quiz.title,
+                                                style = MaterialTheme.typography.titleMedium
+                                            )
+                                            quiz.description?.let {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = it,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                quiz.id?.let { quizId ->
+                                                    viewModel.deleteQuiz(
+                                                        quizId = quizId,
+                                                        onSuccess = {
+                                                            coroutineScope.launch {
+                                                                snackbarHostState.showSnackbar("Quiz usunięty pomyślnie")
+                                                            }
+                                                        },
+                                                        onError = { error ->
+                                                            coroutineScope.launch {
+                                                                snackbarHostState.showSnackbar(error)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            },
+                                            enabled = quiz.id != null
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Usuń quiz",
+                                                tint = MaterialTheme.colorScheme.error
                                             )
                                         }
                                     }

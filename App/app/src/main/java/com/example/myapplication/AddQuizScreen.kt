@@ -1,10 +1,8 @@
 package com.example.myapplication
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -22,7 +20,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AddQuizScreen(navController: NavHostController, courseId: Long) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var title by remember { mutableStateOf("") }
@@ -33,7 +31,7 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
         val questionText: String = "",
         val questionType: String = "multiple_choice", // Domyślny typ: wielokrotnego wyboru
         val options: MutableMap<String, String> = mutableMapOf("A" to "", "B" to ""),
-        val correctAnswer: String = "A" // Domyślna poprawna odpowiedź
+        val correctAnswers: List<String> = emptyList() // Lista poprawnych odpowiedzi
     )
 
     var questions by remember { mutableStateOf<MutableList<QuizQuestionInput>>(mutableListOf()) }
@@ -52,13 +50,13 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                     when (updated.questionType) {
                         "multiple_choice" -> updated.copy(
                             options = mutableMapOf("A" to "", "B" to ""),
-                            correctAnswer = "A"
+                            correctAnswers = emptyList()
                         )
                         "true_false" -> updated.copy(
                             options = mutableMapOf("True" to "Prawda", "False" to "Fałsz"),
-                            correctAnswer = "True"
+                            correctAnswers = listOf("True")
                         )
-                        else -> updated.copy(options = mutableMapOf(), correctAnswer = "")
+                        else -> updated.copy(options = mutableMapOf(), correctAnswers = emptyList())
                     }
                 } else {
                     updated
@@ -85,13 +83,20 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
             val reIndexedOptions = newOptions.entries.mapIndexed { i, entry ->
                 ('A' + i).toString() to entry.value
             }.toMap().toMutableMap()
-            val newCorrectAnswer = if (correctAnswer == key || reIndexedOptions.isEmpty()) {
-                reIndexedOptions.keys.firstOrNull() ?: ""
+            val newCorrectAnswers = correctAnswers.filter { it != key && reIndexedOptions.keys.contains(it) }
+            copy(options = reIndexedOptions, correctAnswers = newCorrectAnswers)
+        }
+    }
+
+    // Funkcja przełączająca poprawną odpowiedź
+    fun toggleCorrectAnswer(index: Int, key: String) {
+        updateQuestion(index) {
+            val newCorrectAnswers = if (correctAnswers.contains(key)) {
+                correctAnswers - key
             } else {
-                val oldIndex = options.keys.indexOf(correctAnswer)
-                ('A' + oldIndex.coerceAtMost(reIndexedOptions.size - 1)).toString()
+                correctAnswers + key
             }
-            copy(options = reIndexedOptions, correctAnswer = newCorrectAnswer)
+            copy(correctAnswers = newCorrectAnswers)
         }
     }
 
@@ -203,12 +208,16 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                         // Warunkowe renderowanie pól w zależności od typu pytania
                         when (question.questionType) {
                             "multiple_choice" -> {
-                                // Dynamiczne pola dla opcji
+                                // Dynamiczne pola dla opcji z checkboxami
                                 question.options.forEach { (key, value) ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        Checkbox(
+                                            checked = question.correctAnswers.contains(key),
+                                            onCheckedChange = { toggleCorrectAnswer(index, key) }
+                                        )
                                         OutlinedTextField(
                                             value = value,
                                             onValueChange = { newValue ->
@@ -237,91 +246,39 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                                 ) {
                                     Text("Dodaj opcję")
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                // Dropdown dla wyboru poprawnej odpowiedzi
-                                var correctExpanded by remember { mutableStateOf(false) }
-                                ExposedDropdownMenuBox(
-                                    expanded = correctExpanded,
-                                    onExpandedChange = { correctExpanded = it }
-                                ) {
-                                    OutlinedTextField(
-                                        value = question.correctAnswer,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        label = { Text("Poprawna odpowiedź") },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = correctExpanded) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .menuAnchor()
-                                    )
-                                    ExposedDropdownMenu(
-                                        expanded = correctExpanded,
-                                        onDismissRequest = { correctExpanded = false }
-                                    ) {
-                                        question.options.keys.forEach { key ->
-                                            DropdownMenuItem(
-                                                text = { Text(key) },
-                                                onClick = {
-                                                    updateQuestion(index) { copy(correctAnswer = key) }
-                                                    correctExpanded = false
-                                                },
-                                                contentPadding = PaddingValues(horizontal = 16.dp)
-                                            )
-                                        }
-                                    }
-                                }
                             }
                             "true_false" -> {
-                                // Stałe opcje dla prawda/fałsz
+                                // Stałe opcje dla prawda/fałsz z checkboxami
                                 question.options.forEach { (key, value) ->
-                                    OutlinedTextField(
-                                        value = value,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        label = { Text("Opcja $key") },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-                                // Dropdown dla wyboru poprawnej odpowiedzi
-                                var correctExpanded by remember { mutableStateOf(false) }
-                                ExposedDropdownMenuBox(
-                                    expanded = correctExpanded,
-                                    onExpandedChange = { correctExpanded = it }
-                                ) {
-                                    OutlinedTextField(
-                                        value = question.correctAnswer,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        label = { Text("Poprawna odpowiedź") },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = correctExpanded) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .menuAnchor()
-                                    )
-                                    ExposedDropdownMenu(
-                                        expanded = correctExpanded,
-                                        onDismissRequest = { correctExpanded = false }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        listOf("True", "False").forEach { key ->
-                                            DropdownMenuItem(
-                                                text = { Text(key) },
-                                                onClick = {
-                                                    updateQuestion(index) { copy(correctAnswer = key) }
-                                                    correctExpanded = false
-                                                },
-                                                contentPadding = PaddingValues(horizontal = 16.dp)
-                                            )
-                                        }
+                                        Checkbox(
+                                            checked = question.correctAnswers.contains(key),
+                                            onCheckedChange = { toggleCorrectAnswer(index, key) }
+                                        )
+                                        OutlinedTextField(
+                                            value = value,
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Opcja $key") },
+                                            modifier = Modifier.weight(1f)
+                                        )
                                     }
+                                    Spacer(modifier = Modifier.height(8.dp))
                                 }
                             }
                             "open_ended" -> {
                                 // Pytanie otwarte
                                 OutlinedTextField(
-                                    value = question.correctAnswer,
-                                    onValueChange = { updateQuestion(index) { copy(correctAnswer = it) } },
-                                    label = { Text("Poprawna odpowiedź") },
+                                    value = question.correctAnswers.joinToString(", "),
+                                    onValueChange = { newValue ->
+                                        updateQuestion(index) {
+                                            copy(correctAnswers = newValue.split(",").map { it.trim() }.filter { it.isNotBlank() })
+                                        }
+                                    },
+                                    label = { Text("Poprawne odpowiedzi (oddzielone przecinkami)") },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -333,12 +290,12 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                 Button(
                     onClick = {
                         if (title.isBlank()) {
-                            scope.launch {
+                            coroutineScope.launch {
                                 snackbarHostState.showSnackbar("Tytuł quizu jest wymagany")
                             }
                             return@Button
                         }
-                        scope.launch {
+                        coroutineScope.launch {
                             try {
                                 val api = RetrofitClient.getInstance(context)
                                 val quiz = Quiz(title = title, description = description.takeIf { it.isNotBlank() })
@@ -361,15 +318,29 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                                                 snackbarHostState.showSnackbar("Pytanie ${index + 1} ma pustą treść")
                                                 return@launch
                                             }
-                                            if (q.questionType == "multiple_choice" && q.options.values.any { it.isBlank() }) {
-                                                snackbarHostState.showSnackbar("Pytanie ${index + 1} ma puste opcje")
+                                            if (q.questionType == "multiple_choice") {
+                                                if (q.options.values.any { it.isBlank() }) {
+                                                    snackbarHostState.showSnackbar("Pytanie ${index + 1} ma puste opcje")
+                                                    return@launch
+                                                }
+                                                if (q.correctAnswers.isEmpty()) {
+                                                    snackbarHostState.showSnackbar("Pytanie ${index + 1} musi mieć co najmniej jedną poprawną odpowiedź")
+                                                    return@launch
+                                                }
+                                            }
+                                            if (q.questionType == "true_false" && q.correctAnswers.isEmpty()) {
+                                                snackbarHostState.showSnackbar("Pytanie ${index + 1} musi mieć co najmniej jedną poprawną odpowiedź")
+                                                return@launch
+                                            }
+                                            if (q.questionType == "open_ended" && q.correctAnswers.isEmpty()) {
+                                                snackbarHostState.showSnackbar("Pytanie ${index + 1} musi mieć co najmniej jedną poprawną odpowiedź")
                                                 return@launch
                                             }
                                             val questionToSave = QuizQuestion(
                                                 questionText = q.questionText,
                                                 questionType = q.questionType,
                                                 options = if (q.questionType in listOf("multiple_choice", "true_false")) q.options else emptyMap(),
-                                                correctAnswer = q.correctAnswer,
+                                                correctAnswer = q.correctAnswers.joinToString(","),
                                                 quizId = quizId
                                             )
                                             Log.d("AddQuiz", "Wysyłanie pytania $index: $questionToSave dla quizId: $quizId")

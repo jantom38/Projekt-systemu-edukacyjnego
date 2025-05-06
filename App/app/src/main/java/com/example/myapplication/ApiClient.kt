@@ -85,6 +85,8 @@ interface CourseApiService {
         @Path("quizId") quizId: Long,
         @Body question: QuizQuestion
     ): Response<QuestionResponse>
+    @DELETE("/api/courses/quizzes/{quizId}")
+    suspend fun deleteQuiz(@Path("quizId") quizId: Long): Response<QuestionResponse>
 }
 
 object RetrofitClient {
