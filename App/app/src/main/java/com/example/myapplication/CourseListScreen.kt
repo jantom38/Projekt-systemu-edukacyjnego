@@ -25,22 +25,7 @@ data class Course(
     val accessKey: String
 )
 
-data class Quiz(
-    val id: Long = 0,
-    val title: String,
-    val description: String?,
-    val createdAt: String? = null
-)
 
-data class QuizQuestion(
-    val id: Long = 0,
-    val questionText: String,
-    val correctAnswer: String,
-    val optionA: String?,
-    val optionB: String?,
-    val optionC: String?,
-    val optionD: String?
-)
 
 class CourseViewModel(context: Context) : ViewModel() {
     private val _courses = mutableStateOf<List<Course>>(emptyList())

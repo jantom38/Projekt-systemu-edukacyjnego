@@ -11,12 +11,40 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 
+// Modele danych
+
+data class Quiz(
+    val id: Long? = null,
+    val title: String,
+    val description: String? = null,
+    val createdAt: String? = null
+)
+data class QuizQuestion(
+    val id: Long? = null,
+    val questionText: String,
+    val questionType: String,
+    val options: Map<String, String>?,
+    val correctAnswer: String,
+    val quizId: Long? = null
+)
+data class QuizListResponse(val success: Boolean, val quizzes: List<Quiz>)
+data class QuizResponse(val success: Boolean, val message: String, val quiz: Quiz)
+data class QuestionResponse(val success: Boolean, val message: String, val question: QuizQuestion)
+data class LoginRequest(val username: String, val password: String)
+data class LoginResponse(val success: Boolean, val token: String?)
+
 interface CourseApiService {
+    @POST("/api/login")
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
     @GET("/api/courses")
     suspend fun getAllCourses(): List<Course>
 
     @POST("/api/courses/{id}/verify-key")
-    suspend fun verifyAccessKey(@Path("id") courseId: Long, @Body request: Map<String, String>): Map<String, Any>
+    suspend fun verifyAccessKey(
+        @Path("id") courseId: Long,
+        @Body request: Map<String, String>
+    ): Map<String, Any>
 
     @GET("/api/courses/{id}/files")
     suspend fun getCourseFiles(@Path("id") courseId: Long): List<CourseFile>
@@ -44,13 +72,19 @@ interface CourseApiService {
     suspend fun getUserCourses(): Map<String, Any>
 
     @GET("/api/courses/{id}/quizzes")
-    suspend fun getCourseQuizzes(@Path("id") courseId: Long): Map<String, Any>
+    suspend fun getCourseQuizzes(@Path("id") courseId: Long): QuizListResponse
 
     @POST("/api/courses/{id}/quizzes")
-    suspend fun createQuiz(@Path("id") courseId: Long, @Body quiz: Quiz): Response<Map<String, Any>>
+    suspend fun createQuiz(
+        @Path("id") courseId: Long,
+        @Body quiz: Quiz
+    ): Response<QuizResponse>
 
     @POST("/api/courses/quizzes/{quizId}/questions")
-    suspend fun createQuizQuestion(@Path("quizId") quizId: Long, @Body question: QuizQuestion): Response<Map<String, Any>>
+    suspend fun createQuizQuestion(
+        @Path("quizId") quizId: Long,
+        @Body question: QuizQuestion
+    ): Response<QuestionResponse>
 }
 
 object RetrofitClient {
@@ -70,7 +104,9 @@ object RetrofitClient {
                     }
                     addHeader("Accept", "application/json")
                 }.build()
-                chain.proceed(request)
+                val response = chain.proceed(request)
+                Log.d("RetrofitClient", "Odpowiedź serwera: ${response.code}")
+                response
             }
             .build()
 

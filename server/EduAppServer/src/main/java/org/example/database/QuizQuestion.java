@@ -2,6 +2,10 @@ package org.example.database;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.Map;
 
 @Entity
 @Table(name = "quiz_questions")
@@ -14,45 +18,40 @@ public class QuizQuestion {
     private String questionText;
 
     @Column(nullable = false)
-    private String correctAnswer;
+    private String questionType; // "multiple_choice" lub "open_ended"
 
-    private String optionA;
-    private String optionB;
-    private String optionC;
-    private String optionD;
+    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, String> options; // Dla pytań wielokrotnego wyboru, np. {"A": "opcja A", "B": "opcja B", ...}
+
+    private String correctAnswer; // Dla pytań wielokrotnego wyboru: klucz poprawnej opcji, dla otwartych: oczekiwana odpowiedź
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "quiz_id", nullable = false)
     @JsonIgnore
     private Quiz quiz;
 
-    // Constructors
+    // Konstruktory
     public QuizQuestion() {}
 
-    public QuizQuestion(String questionText, String correctAnswer, String optionA, String optionB, String optionC, String optionD, Quiz quiz) {
+    public QuizQuestion(String questionText, String questionType, Map<String, String> options, String correctAnswer, Quiz quiz) {
         this.questionText = questionText;
+        this.questionType = questionType;
+        this.options = options;
         this.correctAnswer = correctAnswer;
-        this.optionA = optionA;
-        this.optionB = optionB;
-        this.optionC = optionC;
-        this.optionD = optionD;
         this.quiz = quiz;
     }
 
-    // Getters and Setters
+    // Gettery i Settery
     public Long getId() { return id; }
     public String getQuestionText() { return questionText; }
     public void setQuestionText(String questionText) { this.questionText = questionText; }
+    public String getQuestionType() { return questionType; }
+    public void setQuestionType(String questionType) { this.questionType = questionType; }
+    public Map<String, String> getOptions() { return options; }
+    public void setOptions(Map<String, String> options) { this.options = options; }
     public String getCorrectAnswer() { return correctAnswer; }
     public void setCorrectAnswer(String correctAnswer) { this.correctAnswer = correctAnswer; }
-    public String getOptionA() { return optionA; }
-    public void setOptionA(String optionA) { this.optionA = optionA; }
-    public String getOptionB() { return optionB; }
-    public void setOptionB(String optionB) { this.optionB = optionB; }
-    public String getOptionC() { return optionC; }
-    public void setOptionC(String optionC) { this.optionC = optionC; }
-    public String getOptionD() { return optionD; }
-    public void setOptionD(String optionD) { this.optionD = optionD; }
     public Quiz getQuiz() { return quiz; }
     public void setQuiz(Quiz quiz) { this.quiz = quiz; }
 }

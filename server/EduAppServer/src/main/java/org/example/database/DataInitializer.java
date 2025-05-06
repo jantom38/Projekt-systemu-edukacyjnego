@@ -36,7 +36,7 @@ public class DataInitializer {
         initUsers();
         initCourses();
         initCourseFiles();
-        initQuizzes();
+
     }
 
     private void initUsers() {
@@ -88,34 +88,4 @@ public class DataInitializer {
         }
     }
 
-    private void initQuizzes() {
-        if (quizRepository.count() == 0) {
-            Course javaCourse = courseRepository.findByCourseName("Java Basics")
-                    .orElseThrow(() -> new RuntimeException("Kurs 'Java Basics' nie znaleziony!"));
-
-            Quiz quiz1 = new Quiz("Java Fundamentals Quiz", "Test your knowledge of Java basics", javaCourse);
-            quizRepository.save(quiz1);
-
-            // Sample questions for the quiz
-            quizQuestionRepository.save(new QuizQuestion(
-                "What is the correct syntax for the main method in Java?",
-                "public static void main(String[] args)",
-                "public void main(String[] args)",
-                "public static void main(String args)",
-                "public static void main(String[] args)",
-                "static void main(String[] args)",
-                quiz1
-            ));
-
-            quizQuestionRepository.save(new QuizQuestion(
-                "Which keyword is used to inherit a class in Java?",
-                "extends",
-                "implements",
-                "extends",
-                "super",
-                "this",
-                quiz1
-            ));
         }
-    }
-}

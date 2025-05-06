@@ -58,21 +58,12 @@ class CourseDetailsViewModel(context: Context, private val courseId: Long) : Vie
 
                 // Load quizzes
                 val quizResponse = apiService.getCourseQuizzes(courseId)
-                val success = quizResponse["success"] as? Boolean ?: false
-                if (success) {
-                    @Suppress("UNCHECKED_CAST")
-                    val rawList = quizResponse["quizzes"] as? List<Map<String, Any>> ?: emptyList()
-                    _quizzes.value = rawList.map { m ->
-                        Quiz(
-                            id = ((m["id"] as? Double)?.toLong() ?: 0L),
-                            title = m["title"] as? String ?: "",
-                            description = m["description"] as? String,
-                            createdAt = m["createdAt"] as? String
-                        )
-                    }
+                if (quizResponse.success) {
+                    _quizzes.value = quizResponse.quizzes
                     Log.d("CourseDetails", "Loaded quizzes: ${_quizzes.value}")
                 } else {
-                    _error.value = quizResponse["message"] as? String ?: "Błąd ładowania quizów"
+                    _error.value = "Błąd ładowania quizów"
+                    Log.e("CourseDetails", "Failed to load quizzes: success=false")
                 }
             } catch (e: HttpException) {
                 _error.value = when (e.code()) {
@@ -112,8 +103,6 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
             return FileUploadViewModel(context) as T
         }
     })
-
-
 
     LaunchedEffect(fileUploadViewModel.uploadState) {
         fileUploadViewModel.uploadState.collect { state ->
@@ -292,7 +281,6 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
             }
             LaunchedEffect(Unit) {
                 filePickerLauncher.launch("*/*")
-
             }
         }
     }
