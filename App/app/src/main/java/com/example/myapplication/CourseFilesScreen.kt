@@ -31,10 +31,12 @@ data class CourseFile(
     val fileName: String,
     val fileUrl: String
 )
-
 class CourseFilesViewModel(context: Context, private val courseId: Long) : ViewModel() {
     private val _files = mutableStateOf<List<CourseFile>>(emptyList())
     val files: State<List<CourseFile>> = _files
+
+    private val _quizzes = mutableStateOf<List<Quiz>>(emptyList())
+    val quizzes: State<List<Quiz>> = _quizzes
 
     private val _isLoading = mutableStateOf(true)
     val isLoading: State<Boolean> = _isLoading
@@ -45,17 +47,26 @@ class CourseFilesViewModel(context: Context, private val courseId: Long) : ViewM
     private val apiService = RetrofitClient.getInstance(context)
 
     init {
-        loadFiles()
+        loadContent()
     }
 
-    fun loadFiles() {
+    fun loadContent() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response = apiService.getCourseFiles(courseId)
-                _files.value = response
+                // Load files
+                _files.value = apiService.getCourseFiles(courseId)
                 Log.d("CourseFiles", "Loaded files: ${_files.value}")
+
+                // Load quizzes
+                val quizResponse = apiService.getCourseQuizzes(courseId)
+                if (quizResponse.success) {
+                    _quizzes.value = quizResponse.quizzes
+                    Log.d("CourseFiles", "Loaded quizzes: ${_quizzes.value}")
+                } else {
+                    _error.value = "Błąd ładowania quizów"
+                }
             } catch (e: HttpException) {
                 _error.value = when (e.code()) {
                     401 -> "Brak autoryzacji"
@@ -73,6 +84,7 @@ class CourseFilesViewModel(context: Context, private val courseId: Long) : ViewM
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
     val context = LocalContext.current
@@ -82,85 +94,82 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
         }
     })
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Pliki kursu",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("Pliki", "Quizy")
 
-        when {
-            viewModel.isLoading.value -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            viewModel.error.value != null -> {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = viewModel.error.value!!,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                    Button(
-                        onClick = { viewModel.loadFiles() },
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Text("Spróbuj ponownie")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Kurs") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
                     }
                 }
-            }
-
-            viewModel.files.value.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Brak plików dla tego kursu")
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title) }
+                    )
                 }
             }
 
-            else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(viewModel.files.value) { file ->
-                        FileCard(file = file, context = context)
+            when {
+                viewModel.isLoading.value -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                viewModel.error.value != null -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = viewModel.error.value!!,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        Button(
+                            onClick = { viewModel.loadContent() },
+                            modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                            Text("Spróbuj ponownie")
+                        }
+                    }
+                }
+
+                else -> {
+                    when (selectedTabIndex) {
+                        0 -> FilesTab(viewModel.files.value, context)
+                        1 -> QuizzesTab(viewModel.quizzes.value)
                     }
                 }
             }
         }
     }
-
-        // Dodaj  przycisku wstecz w AppBar
-
-
-
 }
-
 @Composable
 fun FileCard(file: CourseFile, context: Context) {
-    // 1. Pełny URL do pliku na serwerze
     val baseUrl = "http://10.0.2.2:8080"
     val fullUrl = "$baseUrl${file.fileUrl}"
-
-    // 2. MIME type na podstawie nazwy pliku
-    val mimeType = URLConnection
-        .guessContentTypeFromName(file.fileName)
-        ?: "*/*"
+    val mimeType = URLConnection.guessContentTypeFromName(file.fileName) ?: "*/*"
 
     Card(
         modifier = Modifier
@@ -168,23 +177,13 @@ fun FileCard(file: CourseFile, context: Context) {
             .padding(vertical = 8.dp)
             .clickable {
                 try {
-                    // 3. Intent ACTION_VIEW z danymi i typem
                     val intent = Intent(Intent.ACTION_VIEW).apply {
                         setDataAndType(Uri.parse(fullUrl), mimeType)
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK or
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
-                        addCategory(Intent.CATEGORY_BROWSABLE)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
                     context.startActivity(intent)
                 } catch (e: Exception) {
-                    Toast.makeText(
-                        context,
-                        "Nie można otworzyć pliku: ${e.localizedMessage}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    Log.e("FileCard", "Error opening file", e)
+                    Toast.makeText(context, "Nie można otworzyć pliku: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                 }
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -199,4 +198,93 @@ fun FileCard(file: CourseFile, context: Context) {
             )
         }
     }
+}
+
+@Composable
+private fun FilesTab(files: List<CourseFile>, context: Context) {
+    if (files.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Brak plików dla tego kursu")
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            items(files) { file ->
+                FileCard(file = file, context = context)
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuizzesTab(quizzes: List<Quiz>) {
+    if (quizzes.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Brak quizów dla tego kursu")
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            items(quizzes) { quiz ->
+                QuizCard(quiz = quiz)
+            }
+        }
+    }
+}
+
+@Composable
+fun QuizCard(quiz: Quiz) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = quiz.title,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            quiz.description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+
+    @Composable
+     fun FilesTab(files: List<CourseFile>, context: Context) {
+        if (files.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Brak plików dla tego kursu")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(files) { file ->
+                    FileCard(file = file, context = context)
+                }
+            }
+        }
+    }
+
+
 }
