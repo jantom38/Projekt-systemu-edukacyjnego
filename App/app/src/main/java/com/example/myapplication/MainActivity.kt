@@ -58,6 +58,8 @@ fun EduApp() {
                 navController.popBackStack("menu", false)
             }
         }
+
+
         composable("menu") { MenuScreen(navController) }
         composable("available_courses") { UserScreen(navController) }
         composable(
@@ -74,5 +76,23 @@ fun EduApp() {
             val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
             AddQuizScreen(navController, courseId)
         }
+        composable(
+            "solve_quiz/{quizId}",
+            arguments = listOf(navArgument("quizId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val quizId = backStackEntry.arguments?.getLong("quizId") ?: return@composable
+            SolveQuizScreen(navController, quizId)
+        }
+
+        composable(
+            "quiz_result/{quizId}",
+            arguments = listOf(navArgument("quizId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val quizId = backStackEntry.arguments?.getLong("quizId") ?: return@composable
+            QuizResultScreen(navController, quizId)
+        }
+
+
     }
+
 }

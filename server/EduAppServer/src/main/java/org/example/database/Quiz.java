@@ -2,8 +2,11 @@ package org.example.database;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.val;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "quizzes")
@@ -24,6 +27,12 @@ public class Quiz {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+
+    @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<QuizQuestion> questions = new ArrayList<>();
+    @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<QuizResult> quizResults = new ArrayList<>();
     // Constructors
     public Quiz() {}
 
@@ -43,4 +52,11 @@ public class Quiz {
     public void setCourse(Course course) { this.course = course; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public List<QuizQuestion> getQuestions() {
+        return questions;
+    }
+
+    public void setQuestions(List<QuizQuestion> questions) {
+        this.questions = questions;
+    }
 }

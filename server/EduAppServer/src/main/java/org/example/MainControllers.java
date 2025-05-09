@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ private final UserRepository userRepository;
 private final QuizRepository quizRepository;
 private final UserCourseRepository userCourseRepository;
 private final QuizQuestionRepository quizQuestionRepository;
+  private final QuizResultRepository quizResultRepository;
 
 
 
@@ -44,7 +46,7 @@ private final QuizQuestionRepository quizQuestionRepository;
 public MainControllers(CourseRepository courseRepository,
                        CourseFileRepository courseFileRepository,
                        UserRepository userRepository,
-                       QuizRepository quizRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository) {
+                       QuizRepository quizRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, QuizResultRepository quizResultRepository) {
     this.courseRepository = courseRepository;
     this.courseFileRepository = courseFileRepository;
     this.userRepository = userRepository;
@@ -52,6 +54,7 @@ public MainControllers(CourseRepository courseRepository,
 
     this.userCourseRepository = userCourseRepository;
     this.quizQuestionRepository = quizQuestionRepository;
+    this.quizResultRepository = quizResultRepository;
 }
 
 private String currentUsername() {
@@ -398,5 +401,138 @@ public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
                             .body(Map.of("success", false, "message", "Quiz not found"));
                 });
     }
+// W MainControllers.java
+
+    // 1. Pobieranie aktywnych quizów dla kursu (dla studentów)
+    @GetMapping("/{courseId}/available-quizzes")
+    public ResponseEntity<?> getAvailableQuizzes(@PathVariable Long courseId) {
+        // Sprawdzenie czy użytkownik jest zapisany na kurs
+        if (!userCourseRepository.existsByUserIdAndCourseId(getCurrentUserId(), courseId)) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "success", false,
+                    "message", "Nie jesteś zapisany na ten kurs"));
+        }
+
+        List<Quiz> quizzes = quizRepository.findByCourseId(courseId);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "quizzes", quizzes
+        ));
+    }
+
+    // 2. Pobieranie quizu z pytaniami (bez poprawnych odpowiedzi)
+    @GetMapping("/quizzes/{quizId}")
+    public ResponseEntity<?> getQuizForSolving(@PathVariable Long quizId) {
+        return quizRepository.findById(quizId)
+                .map(quiz -> {
+                    List<org.example.dto.QuizQuestionDTO> questions = quizQuestionRepository.findByQuizId(quizId).stream()
+                            .map(q -> new org.example.dto.QuizQuestionDTO(
+                                    q.getId(),
+                                    q.getQuestionText(),
+                                    q.getQuestionType(),
+                                    q.getOptions()
+                            ))
+                            .collect(Collectors.toList());
+
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "quiz", Map.of(
+                                    "id", quiz.getId(),
+                                    "title", quiz.getTitle(),
+                                    "description", quiz.getDescription(),
+                                    "questions", questions
+                            )
+                    ));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+    private boolean validateMultipleChoice(QuizQuestion question, String answer) {
+        Set<String> correctAnswers = Set.of(question.getCorrectAnswer().split(","));
+        Set<String> userAnswers = Set.of(answer.split(","));
+        return correctAnswers.equals(userAnswers);
+    }
+
+    private boolean validateTrueFalse(QuizQuestion question, String answer) {
+        return question.getCorrectAnswer().equalsIgnoreCase(answer);
+    }
+
+    private boolean validateOpenEnded(QuizQuestion question, String answer) {
+        return answer.trim().equalsIgnoreCase(question.getCorrectAnswer().trim());
+    }
+    private Long getCurrentUserId() {
+        return userRepository.findByUsername(currentUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"))
+                .getId();
+    }
+    private User getCurrentUser() {
+        return userRepository.findByUsername(currentUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+    private boolean validateAnswer(org.example.dto.QuizAnswerDTO answer) {
+        QuizQuestion question = quizQuestionRepository.findById(answer.questionId())
+                .orElseThrow(() -> new RuntimeException("Question not found"));
+
+        return switch (question.getQuestionType()) {
+            case "multiple_choice" -> validateMultipleChoice(question, answer.answer());
+            case "true_false" -> validateTrueFalse(question, answer.answer());
+            case "open_ended" -> validateOpenEnded(question, answer.answer());
+            default -> throw new IllegalArgumentException("Unknown question type");
+        };
+    }
+    // 3. Zapis odpowiedzi i obliczenie wyniku
+    @PostMapping("/quizzes/{quizId}/submit")
+    public ResponseEntity<?> submitQuizAnswers(
+            @PathVariable Long quizId,
+            @RequestBody List<org.example.dto.QuizAnswerDTO> answers
+    ) {
+        // Walidacja
+        if (answers == null || answers.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Brak odpowiedzi"
+            ));
+        }
+
+        // Obliczanie wyniku
+        int totalQuestions = answers.size();
+        int correctAnswers = (int) answers.stream().filter(answer -> validateAnswer(answer)).count();
+
+        // Zapis wyniku do bazy
+        QuizResult result = new QuizResult(
+                getCurrentUser(),
+                quizRepository.getReferenceById(quizId),
+                correctAnswers,
+                totalQuestions,
+                LocalDateTime.now()
+        );
+        quizResultRepository.save(result);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "score", correctAnswers + "/" + totalQuestions,
+                "percentage", (correctAnswers * 100.0) / totalQuestions
+        ));
+    }
+
+    // 4. Pobieranie historii wyników
+    @GetMapping("/quizzes/{quizId}/results")
+    public ResponseEntity<?> getQuizResults(@PathVariable Long quizId) {
+
+        List<QuizResult> results = quizResultRepository.findByUserIdAndQuizId(
+                getCurrentUserId(),
+                quizId
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "results", results.stream()
+                        .map(r -> Map.of(
+                                "date", r.getCompletionDate(),
+                                "score", r.getCorrectAnswers() + "/" + r.getTotalQuestions()
+                        ))
+                        .collect(Collectors.toList())
+        ));
+    }
+
 
 }

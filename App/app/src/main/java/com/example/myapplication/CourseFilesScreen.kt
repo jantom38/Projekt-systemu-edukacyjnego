@@ -158,7 +158,7 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
                 else -> {
                     when (selectedTabIndex) {
                         0 -> FilesTab(viewModel.files.value, context)
-                        1 -> QuizzesTab(viewModel.quizzes.value)
+                        1 -> QuizzesTab(viewModel.quizzes.value, navController)
                     }
                 }
             }
@@ -220,9 +220,8 @@ private fun FilesTab(files: List<CourseFile>, context: Context) {
         }
     }
 }
-
 @Composable
-private fun QuizzesTab(quizzes: List<Quiz>) {
+private fun QuizzesTab(quizzes: List<Quiz>, navController: NavHostController) {
     if (quizzes.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -236,18 +235,23 @@ private fun QuizzesTab(quizzes: List<Quiz>) {
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             items(quizzes) { quiz ->
-                QuizCard(quiz = quiz)
+                QuizCard(quiz = quiz, navController = navController)
             }
         }
     }
 }
 
 @Composable
-fun QuizCard(quiz: Quiz) {
+fun QuizCard(quiz: Quiz, navController: NavHostController) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable {
+                quiz.id?.let {
+                    navController.navigate("solve_quiz/$it")
+                }
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -264,27 +268,27 @@ fun QuizCard(quiz: Quiz) {
             }
         }
     }
-
-    @Composable
-     fun FilesTab(files: List<CourseFile>, context: Context) {
-        if (files.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Brak plików dla tego kursu")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(files) { file ->
-                    FileCard(file = file, context = context)
-                }
-            }
-        }
-    }
-
-
 }
+
+//    @Composable
+//     fun FilesTab(files: List<CourseFile>, context: Context) {
+//        if (files.isEmpty()) {
+//            Box(
+//                modifier = Modifier.fillMaxSize(),
+//                contentAlignment = Alignment.Center
+//            ) {
+//                Text("Brak plików dla tego kursu")
+//            }
+//        } else {
+//            LazyColumn(
+//                modifier = Modifier.fillMaxSize(),
+//                contentPadding = PaddingValues(bottom = 16.dp)
+//            ) {
+//                items(files) { file ->
+//                    FileCard(file = file, context = context)
+//                }
+//            }
+//        }
+//    }
+
+

@@ -12,12 +12,17 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 
 // Modele danych
-
+data class QuizAnswerDTO(
+    val questionId: Long,
+    val answer: String
+)
 data class Quiz(
     val id: Long? = null,
     val title: String,
     val description: String? = null,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val questions: List<QuizQuestion> = emptyList()
+
 )
 data class QuizQuestion(
     val id: Long? = null,
@@ -87,6 +92,17 @@ interface CourseApiService {
     ): Response<QuestionResponse>
     @DELETE("/api/courses/quizzes/{quizId}")
     suspend fun deleteQuiz(@Path("quizId") quizId: Long): Response<QuestionResponse>
+    @GET("/api/courses/quizzes/{quizId}")
+    suspend fun getQuiz(@Path("quizId") quizId: Long): Response<Quiz>
+
+    @POST("/api/courses/quizzes/{quizId}/submit")
+    suspend fun submitQuizAnswers(
+        @Path("quizId") quizId: Long,
+        @Body answers: List<QuizAnswerDTO>
+    ): Response<Unit>
+    // W interfejsie CourseApiService
+    @GET("/api/courses/quizzes/{quizId}/result")
+    suspend fun getQuizResult(@Path("quizId") quizId: Long): Response<QuizResult>
 }
 
 object RetrofitClient {

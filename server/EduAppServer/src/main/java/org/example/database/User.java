@@ -1,5 +1,9 @@
 package org.example.database;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -16,6 +20,9 @@ public class User {
     private UserRole role;
 
     private Integer courseId; // dla studentów - przypisanie do kursu
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<QuizResult> quizResults = new ArrayList<>();
 
     // Gettery i settery
     public Long getId() { return id; }

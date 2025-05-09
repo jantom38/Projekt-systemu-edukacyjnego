@@ -62,7 +62,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-
+    implementation ("androidx.compose.foundation:foundation:1.3.1")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
