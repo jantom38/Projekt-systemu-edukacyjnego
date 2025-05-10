@@ -6,6 +6,7 @@ import org.example.DataBaseRepositories.*;
 import org.example.database.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -20,10 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,14 +39,14 @@ private final QuizRepository quizRepository;
 private final UserCourseRepository userCourseRepository;
 private final QuizQuestionRepository quizQuestionRepository;
   private final QuizResultRepository quizResultRepository;
-
+private final QuizAnswerRepository quizAnswerRepository;
 
 
 @Autowired
 public MainControllers(CourseRepository courseRepository,
                        CourseFileRepository courseFileRepository,
                        UserRepository userRepository,
-                       QuizRepository quizRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, QuizResultRepository quizResultRepository) {
+                       QuizRepository quizRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, QuizResultRepository quizResultRepository, QuizAnswerRepository quizAnswerRepository) {
     this.courseRepository = courseRepository;
     this.courseFileRepository = courseFileRepository;
     this.userRepository = userRepository;
@@ -57,6 +55,7 @@ public MainControllers(CourseRepository courseRepository,
     this.userCourseRepository = userCourseRepository;
     this.quizQuestionRepository = quizQuestionRepository;
     this.quizResultRepository = quizResultRepository;
+    this.quizAnswerRepository = quizAnswerRepository;
 }
 
 private String currentUsername() {
@@ -528,27 +527,51 @@ public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
 
         try {
             int totalQuestions = answers.size();
-            int correctAnswers = (int) answers.stream().filter(this::validateAnswer).count();
-
-            log.debug("Quiz {} validation completed. Correct answers: {}/{}",
-                    quizId, correctAnswers, totalQuestions);
+            List<QuizAnswer> quizAnswers = new ArrayList<>();
+            int correctAnswers = 0;
 
             QuizResult result = new QuizResult(
                     getCurrentUser(),
                     quizRepository.getReferenceById(quizId),
-                    correctAnswers,
+                    0, // Ustawimy później
                     totalQuestions,
                     LocalDateTime.now()
             );
             quizResultRepository.save(result);
 
+            for (QuizAnswerDTO answer : answers) {
+                QuizQuestion question = quizQuestionRepository.findById(answer.questionId())
+                        .orElseThrow(() -> {
+                            log.error("Question not found with ID: {}", answer.questionId());
+                            return new RuntimeException("Question not found");
+                        });
+                boolean isCorrect = validateAnswer(answer);
+
+                QuizAnswer quizAnswer = new QuizAnswer();
+                quizAnswer.setQuizResult(result);
+                quizAnswer.setQuestion(question);
+                quizAnswer.setUserAnswer(answer.answer());
+                quizAnswer.setIsCorrect(isCorrect);
+                quizAnswers.add(quizAnswer);
+
+                if (isCorrect) {
+                    correctAnswers++;
+                }
+            }
+
+            result.setCorrectAnswers(correctAnswers);
+            quizResultRepository.save(result);
+            quizAnswerRepository.saveAll(quizAnswers);
+
             log.info("Quiz {} results saved for user {}. Score: {}/{}",
                     quizId, userId, correctAnswers, totalQuestions);
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "score", correctAnswers + "/" + totalQuestions,
-                    "percentage", (correctAnswers * 100.0) / totalQuestions
+            return ResponseEntity.ok(new SubmissionResultDTO(
+                    true,
+                    correctAnswers + "/" + totalQuestions,
+                    correctAnswers,
+                    totalQuestions,
+                    (correctAnswers * 100.0) / totalQuestions
             ));
         } catch (Exception e) {
             log.error("Error processing quiz submission for quiz {} by user {}: {}",
@@ -567,18 +590,42 @@ public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
         log.info("Fetching quiz results for quiz {} by user {}", quizId, userId);
 
         List<QuizResult> results = quizResultRepository.findByUserIdAndQuizId(userId, quizId);
+        if (results.isEmpty()) {
+            log.warn("No results found for quiz {} and user {}", quizId, userId);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "quizId", quizId,
+                    "correctAnswers", 0,
+                    "totalQuestions", 0,
+                    "score", 0.0,
+                    "questions", Collections.emptyList()
+            ));
+        }
+
+        QuizResult latestResult = results.get(0); // Pobieramy najnowszy wynik
+        List<QuizAnswer> quizAnswers = quizAnswerRepository.findByQuizResultId(latestResult.getId());
+
+        List<Map<String, Object>> questionResults = quizAnswers.stream().map(answer -> {
+            Map<String, Object> questionResult = new HashMap<>();
+            questionResult.put("questionId", answer.getQuestion().getId());
+            questionResult.put("questionText", answer.getQuestion().getQuestionText());
+            questionResult.put("userAnswer", answer.getUserAnswer());
+            questionResult.put("correctAnswer", answer.getQuestion().getCorrectAnswer());
+            questionResult.put("isCorrect", answer.isCorrect());
+            return questionResult;
+        }).collect(Collectors.toList());
 
         log.debug("Found {} results for quiz {} and user {}", results.size(), quizId, userId);
 
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "results", results.stream()
-                        .map(r -> Map.of(
-                                "date", r.getCompletionDate(),
-                                "score", r.getCorrectAnswers() + "/" + r.getTotalQuestions()
-                        ))
-                        .collect(Collectors.toList())
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("quizId", quizId);
+        response.put("correctAnswers", latestResult.getCorrectAnswers());
+        response.put("totalQuestions", latestResult.getTotalQuestions());
+        response.put("score", (latestResult.getCorrectAnswers() * 100.0) / latestResult.getTotalQuestions());
+        response.put("questions", questionResults);
+
+        return ResponseEntity.ok(response);
     }
 
 }

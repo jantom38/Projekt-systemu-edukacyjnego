@@ -42,8 +42,7 @@ fun SolveQuizScreen(navController: NavHostController, quizId: Long) {
                     onClick = {
                         coroutineScope.launch {
                             val result = viewModel.submitAnswers()        // <-- DTO
-                            navController.navigate( "quiz_result/${viewModel.quizId}/${result.correctAnswers}/${result.totalQuestions}")
-                        }
+                            navController.navigate("quiz_result/$quizId")                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

@@ -1,6 +1,9 @@
 package com.example.myapplication
 
 import android.content.Context
+import android.net.http.HttpException
+import android.os.Build
+import androidx.annotation.RequiresExtension
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,56 +21,144 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.text.NumberFormat
 @Composable
 fun QuizResultScreen(
     quizId: Long,
-    correctAnswers: Int,
-    totalQuestions: Int,
     navController: NavHostController
 ) {
-    val percentage = correctAnswers.toFloat() / totalQuestions
+    val context = LocalContext.current
+    val viewModel: QuizResultViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return QuizResultViewModel(context, quizId) as T
+            }
+        }
+    )
+    val quizResult by viewModel.result
+    val isLoading by viewModel.isLoading
+    val error by viewModel.error
 
     Scaffold { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            CircularProgressIndicator(
-                progress = percentage,
-                modifier = Modifier.size(120.dp),
-                strokeWidth = 8.dp
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = NumberFormat.getPercentInstance().format(percentage),
-                style = MaterialTheme.typography.displayMedium
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "$correctAnswers / $totalQuestions poprawnych odpowiedzi",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(Modifier.height(24.dp))
-            Button(onClick = { navController.popBackStack("course_details/$quizId", false) }) {
-                Text("Powrót do kursu")
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            error != null -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = error ?: "Nieznany błąd",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                }
+            }
+            else -> {
+                quizResult?.let { result ->
+                    val progress = if (result.totalQuestions > 0)
+                        result.correctAnswers.toFloat() / result.totalQuestions
+                    else
+                        0f
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator(
+                            progress = progress,
+                            modifier = Modifier.size(120.dp),
+                            strokeWidth = 8.dp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = NumberFormat.getPercentInstance().format(progress),
+                            style = MaterialTheme.typography.displayMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "${result.correctAnswers} / ${result.totalQuestions} poprawnych odpowiedzi",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Wyświetlenie szczegółów pytań
+                        if (result.questions.isNotEmpty()) {
+                            LazyColumn(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                items(result.questions) { question ->
+                                    QuestionResultItem(question)
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = "Brak szczegółowych wyników dla tego quizu",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(onClick = {
+                            navController.popBackStack("course_details/$quizId", false)
+                        }) {
+                            Text("Powrót do kursu")
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                } ?: run {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Brak wyników dla tego quizu",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = {
+                            navController.popBackStack("course_details/$quizId", false)
+                        }) {
+                            Text("Powrót do kursu")
+                        }
+                    }
+                }
             }
         }
     }
 }
-
 
 @Composable
 fun QuestionResultItem(question: QuestionResult) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -76,18 +167,20 @@ fun QuestionResultItem(question: QuestionResult) {
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = "Twoja odpowiedź: ${question.userAnswer}",
-                color = if(question.isCorrect) Color.Green else Color.Red
+                color = if (question.isCorrect) Color.Green else Color.Red,
+                style = MaterialTheme.typography.bodyMedium
             )
             Text(
                 text = "Poprawna odpowiedź: ${question.correctAnswer}",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
 }
+
 
 class QuizResultViewModel(context: Context, private val quizId: Long) : ViewModel() {
     private val apiService = RetrofitClient.getInstance(context)
@@ -103,20 +196,29 @@ class QuizResultViewModel(context: Context, private val quizId: Long) : ViewMode
         loadResult()
     }
 
+
     fun loadResult() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 _isLoading.value = true
                 _error.value = null
 
                 val response = apiService.getQuizResult(quizId)
                 if (response.isSuccessful) {
-                    _result.value = response.body()
+                    val quizResult = response.body()
+                    if (quizResult != null && quizResult.totalQuestions > 0) {
+                        _result.value = quizResult
+                    } else {
+                        _error.value = "Brak wyników dla tego quizu"
+                    }
                 } else {
                     _error.value = "Błąd ładowania wyników: ${response.code()}"
                 }
-            } catch (e: Exception) {
+
+            } catch (e: IOException) {
                 _error.value = "Błąd połączenia: ${e.localizedMessage}"
+            } catch (e: Exception) {
+                _error.value = "Nieznany błąd: ${e.localizedMessage}"
             } finally {
                 _isLoading.value = false
             }
