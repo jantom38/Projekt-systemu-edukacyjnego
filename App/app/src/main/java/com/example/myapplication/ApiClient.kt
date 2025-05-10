@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import android.content.Context
 import android.util.Log
+import com.google.gson.annotations.SerializedName
 import okhttp3.Interceptor
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -24,7 +25,14 @@ data class Quiz(
     val questions: List<QuizQuestion> = emptyList()
 
 )
+data class Quizsolve(
+    val id: Long,
+    val title: String,
+    val description: String?,
+    val questions: List<QuizQuestion>
+)
 data class QuizQuestion(
+    @SerializedName("questionId")
     val id: Long? = null,
     val questionText: String,
     val questionType: String,
@@ -32,9 +40,26 @@ data class QuizQuestion(
     val correctAnswer: String,
     val quizId: Long? = null
 )
+data class QuizHistoryResponse(
+    val success: Boolean,
+    val results: List<QuizHistoryItem>
+)
+data class QuizHistoryItem(
+    val date: String,
+    val score: String
+)
+data class SubmissionResultDTO(
+    val success: Boolean,
+    val score: String,
+    val correctAnswers: Int,
+    val totalQuestions: Int,
+    val percentage: Double
+)
 data class QuizListResponse(val success: Boolean, val quizzes: List<Quiz>)
-data class QuizResponse(val success: Boolean, val message: String, val quiz: Quiz)
-data class QuestionResponse(val success: Boolean, val message: String, val question: QuizQuestion)
+data class QuizResponse(
+    val success: Boolean,
+    val quiz: Quiz
+)data class QuestionResponse(val success: Boolean, val message: String, val question: QuizQuestion)
 data class LoginRequest(val username: String, val password: String)
 data class LoginResponse(val success: Boolean, val token: String?)
 
@@ -93,15 +118,16 @@ interface CourseApiService {
     @DELETE("/api/courses/quizzes/{quizId}")
     suspend fun deleteQuiz(@Path("quizId") quizId: Long): Response<QuestionResponse>
     @GET("/api/courses/quizzes/{quizId}")
-    suspend fun getQuiz(@Path("quizId") quizId: Long): Response<Quiz>
+    suspend fun getQuiz(@Path("quizId") quizId: Long): Response<QuizResponse>
 
     @POST("/api/courses/quizzes/{quizId}/submit")
     suspend fun submitQuizAnswers(
         @Path("quizId") quizId: Long,
         @Body answers: List<QuizAnswerDTO>
-    ): Response<Unit>
+    ): Response<SubmissionResultDTO>
+
     // W interfejsie CourseApiService
-    @GET("/api/courses/quizzes/{quizId}/result")
+    @GET("/api/courses/quizzes/{quizId}/results")
     suspend fun getQuizResult(@Path("quizId") quizId: Long): Response<QuizResult>
 }
 

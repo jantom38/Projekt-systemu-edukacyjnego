@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -17,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,8 +41,8 @@ fun SolveQuizScreen(navController: NavHostController, quizId: Long) {
                 Button(
                     onClick = {
                         coroutineScope.launch {
-                            viewModel.submitAnswers()
-                            navController.navigate("quiz_result/${viewModel.quizId}")
+                            val result = viewModel.submitAnswers()        // <-- DTO
+                            navController.navigate( "quiz_result/${viewModel.quizId}/${result.correctAnswers}/${result.totalQuestions}")
                         }
                     },
                     modifier = Modifier
@@ -124,48 +126,44 @@ class SolveQuizViewModel(context: Context, val quizId: Long) : ViewModel() {
 
     fun loadQuiz() {
         viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                _error.value = null
+            _isLoading.value = true
+            _error.value = null
 
-                val quizResponse = apiService.getQuiz(quizId)
-                if (quizResponse.isSuccessful) {
-                    _quiz.value = quizResponse.body()
-                    _questions.value = quizResponse.body()?.questions ?: emptyList()
+            try {
+                val response = apiService.getQuiz(quizId)
+                if (response.isSuccessful) {
+                    val body = response.body()!!
+                    _quiz.value = body.quiz
+                    _questions.value = body.quiz.questions
+                    _showSubmitButton.value = body.quiz.questions.isNotEmpty()
                 } else {
-                    _error.value = "Błąd ładowania quizu: ${quizResponse.code()}"
+                    _error.value = "Błąd: ${response.code()}"
                 }
             } catch (e: Exception) {
                 _error.value = "Błąd połączenia: ${e.localizedMessage}"
             } finally {
                 _isLoading.value = false
-                _showSubmitButton.value = _questions.value.isNotEmpty()
             }
         }
     }
-
     fun onAnswerSelected(questionId: Long, answers: List<String>) {
         _selectedAnswers.value = _selectedAnswers.value.toMutableMap().apply {
             put(questionId, answers)
         }
     }
 
-    suspend fun submitAnswers() {
-        withContext(Dispatchers.IO) {
-            try {
-                val response = apiService.submitQuizAnswers(
-                    quizId,
-                    _selectedAnswers.value.map {
-                        QuizAnswerDTO(it.key, it.value.joinToString(","))
-                    }
-                )
-
-                if (!response.isSuccessful) {
-                    throw Exception("Błąd wysyłania odpowiedzi")
+    suspend fun submitAnswers(): SubmissionResultDTO {
+        return withContext(Dispatchers.IO) {
+            val response = apiService.submitQuizAnswers(
+                quizId,
+                _selectedAnswers.value.map {
+                    QuizAnswerDTO(it.key, it.value.joinToString(","))
                 }
-            } catch (e: Exception) {
-                throw Exception("Błąd połączenia: ${e.localizedMessage}")
+            )
+            if (!response.isSuccessful) {
+                throw Exception("Błąd wysyłania odpowiedzi")
             }
+            response.body()!!
         }
     }
 }

@@ -21,83 +21,46 @@ import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
-
 @Composable
-fun QuizResultScreen(navController: NavHostController, quizId: Long) {
-    val context = LocalContext.current
-    val viewModel: QuizResultViewModel = viewModel(factory = object : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return QuizResultViewModel(context, quizId) as T
-        }
-    })
+fun QuizResultScreen(
+    quizId: Long,
+    correctAnswers: Int,
+    totalQuestions: Int,
+    navController: NavHostController
+) {
+    val percentage = correctAnswers.toFloat() / totalQuestions
 
-    Scaffold(
-
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            when {
-                viewModel.isLoading.value -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                viewModel.error.value != null -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = viewModel.error.value!!,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadResult() }) {
-                            Text("Spróbuj ponownie")
-                        }
-                    }
-                }
-
-                viewModel.result.value != null -> {
-                    val result = viewModel.result.value!!
-                    val percentage = NumberFormat.getPercentInstance().format(result.score)
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator(
-                            progress = result.score.toFloat(),
-                            modifier = Modifier.size(120.dp),
-                            strokeWidth = 8.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "$percentage",
-                            style = MaterialTheme.typography.displayMedium
-                        )
-                        Text(
-                            text = "${result.correctAnswers}/${result.totalQuestions} poprawnych odpowiedzi",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            items(result.questions) { question ->
-                                QuestionResultItem(question = question)
-                            }
-                        }
-                    }
-                }
+    Scaffold { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator(
+                progress = percentage,
+                modifier = Modifier.size(120.dp),
+                strokeWidth = 8.dp
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = NumberFormat.getPercentInstance().format(percentage),
+                style = MaterialTheme.typography.displayMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "$correctAnswers / $totalQuestions poprawnych odpowiedzi",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = { navController.popBackStack("course_details/$quizId", false) }) {
+                Text("Powrót do kursu")
             }
         }
     }
 }
+
 
 @Composable
 fun QuestionResultItem(question: QuestionResult) {
