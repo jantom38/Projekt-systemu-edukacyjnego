@@ -113,7 +113,7 @@ private fun authenticateUser(
     CoroutineScope(Dispatchers.IO).launch {
         var connection: HttpURLConnection? = null
         try {
-            val serverUrl = "http://10.0.2.2:8080/api/auth/login"
+            val serverUrl = "http://192.168.24.18:8080/api/auth/login"
 
             val jsonPayload = JSONObject().apply {
                 put("username", username)

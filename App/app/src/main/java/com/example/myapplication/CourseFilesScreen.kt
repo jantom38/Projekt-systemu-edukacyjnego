@@ -167,7 +167,7 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
 }
 @Composable
 fun FileCard(file: CourseFile, context: Context) {
-    val baseUrl = "http://10.0.2.2:8080"
+    val baseUrl = "http://192.168.24.18:8080"
     val fullUrl = "$baseUrl${file.fileUrl}"
     val mimeType = URLConnection.guessContentTypeFromName(file.fileName) ?: "*/*"
 
