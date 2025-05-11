@@ -603,7 +603,7 @@ public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
         }
 
         QuizResult latestResult = results.get(0); // Pobieramy najnowszy wynik
-        List<QuizAnswer> quizAnswers = quizAnswerRepository.findByQuizResultId(latestResult.getId());
+        List<QuizAnswer> quizAnswers = quizAnswerRepository.findByQuizResultIdWithQuestions(latestResult.getId());
 
         List<Map<String, Object>> questionResults = quizAnswers.stream().map(answer -> {
             Map<String, Object> questionResult = new HashMap<>();
