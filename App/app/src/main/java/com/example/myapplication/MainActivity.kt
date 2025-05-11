@@ -90,7 +90,20 @@ fun EduApp() {
             val quizId = backStack.arguments!!.getLong("quizId")
             QuizResultScreen(quizId, navController)
         }
-
+        composable(
+            "quiz_stats/{courseId}",
+            arguments = listOf(navArgument("courseId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
+            TeacherQuizStatsScreen(navController, courseId)
+        }
+        composable(
+            "quiz_results/{quizId}",
+            arguments = listOf(navArgument("quizId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val quizId = backStackEntry.arguments?.getLong("quizId") ?: return@composable
+            TeacherQuizResultsScreen(navController, quizId)
+        }
 
 
     }

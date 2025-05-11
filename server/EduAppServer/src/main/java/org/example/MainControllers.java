@@ -628,4 +628,96 @@ public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{courseId}/quiz-stats")
+    public ResponseEntity<?> getCourseQuizStats(@PathVariable Long courseId) {
+        log.info("Fetching quiz statistics for course ID: {} by teacher {}", courseId, currentUsername());
+
+        if (courseRepository.findByIdAndTeacherUsername(courseId, currentUsername()).isEmpty()) {
+            log.warn("Teacher {} attempted to access stats for course ID: {} without permission", currentUsername(), courseId);
+            return ResponseEntity.status(403).body(Map.of(
+                    "success", false,
+                    "message", "Brak dostępu do tego kursu"));
+        }
+
+        List<Quiz> quizzes = quizRepository.findByCourseId(courseId);
+        List<Map<String, Object>> stats = quizzes.stream().map(quiz -> {
+            List<QuizResult> results = quizResultRepository.findByQuizId(quiz.getId());
+            long attempts = results.size();
+            double avgScore = results.isEmpty() ? 0.0 :
+                    results.stream()
+                            .mapToDouble(r -> (r.getCorrectAnswers() * 100.0) / r.getTotalQuestions())
+                            .average()
+                            .orElse(0.0);
+
+            Map<String, Object> quizStat = new HashMap<>();
+            quizStat.put("quizId", quiz.getId());
+            quizStat.put("quizTitle", quiz.getTitle());
+            quizStat.put("attempts", attempts);
+            quizStat.put("averageScore", Math.round(avgScore * 10.0) / 10.0);
+            return quizStat;
+        }).collect(Collectors.toList());
+
+        log.info("Retrieved stats for {} quizzes in course ID: {}", stats.size(), courseId);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "courseId", courseId,
+                "stats", stats
+        ));
+    }
+
+    // Get detailed results for a specific quiz (all student answers)
+    @GetMapping("/quizzes/{quizId}/detailed-results")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> getQuizDetailedResults(@PathVariable Long quizId) {
+        log.info("Fetching detailed results for quiz ID: {} by teacher {}", quizId, currentUsername());
+
+        return quizRepository.findById(quizId)
+                .map(quiz -> {
+                    if (!quiz.getCourse().getTeacher().getUsername().equals(currentUsername())) {
+                        log.warn("Teacher {} attempted to access detailed results for quiz ID: {} without permission", currentUsername(), quizId);
+                        return ResponseEntity.status(403).body(Map.of(
+                                "success", false,
+                                "message", "Brak dostępu do tego quizu"));
+                    }
+
+                    List<QuizResult> results = quizResultRepository.findByQuizId(quizId);
+                    List<Map<String, Object>> detailedResults = results.stream().map(result -> {
+                        List<QuizAnswer> answers = quizAnswerRepository.findByQuizResultIdWithQuestions(result.getId());
+                        Map<String, Object> studentResult = new HashMap<>();
+                        studentResult.put("userId", result.getUser().getId());
+                        studentResult.put("username", result.getUser().getUsername());
+                        studentResult.put("correctAnswers", result.getCorrectAnswers());
+                        studentResult.put("totalQuestions", result.getTotalQuestions());
+                        studentResult.put("score", (result.getCorrectAnswers() * 100.0) / result.getTotalQuestions());
+                        studentResult.put("completionDate", result.getCompletionDate());
+
+                        List<Map<String, Object>> questionAnswers = answers.stream().map(answer -> {
+                            Map<String, Object> answerDetail = new HashMap<>();
+                            answerDetail.put("questionId", answer.getQuestion().getId());
+                            answerDetail.put("questionText", answer.getQuestion().getQuestionText());
+                            answerDetail.put("userAnswer", answer.getUserAnswer());
+                            answerDetail.put("correctAnswer", answer.getQuestion().getCorrectAnswer());
+                            answerDetail.put("isCorrect", answer.isCorrect());
+                            return answerDetail;
+                        }).collect(Collectors.toList());
+
+                        studentResult.put("answers", questionAnswers);
+                        return studentResult;
+                    }).collect(Collectors.toList());
+
+                    log.info("Retrieved detailed results for quiz ID: {} with {} student submissions", quizId, detailedResults.size());
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "quizId", quizId,
+                            "quizTitle", quiz.getTitle(),
+                            "results", detailedResults
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.error("Quiz ID: {} not found", quizId);
+                    return ResponseEntity.status(404).body(Map.of(
+                            "success", false,
+                            "message", "Quiz not found"));
+                });
+    }
 }

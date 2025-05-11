@@ -1,12 +1,7 @@
 package com.example.myapplication
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.util.Log
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,11 +20,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
-import java.net.URLConnection
 
 class CourseDetailsViewModel(context: Context, private val courseId: Long) : ViewModel() {
     private val _files = mutableStateOf<List<CourseFile>>(emptyList())
@@ -130,29 +122,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
         viewModel.loadContent()
     }
     val snackbarHostState = remember { SnackbarHostState() }
-    var showFilePicker by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-
-    val fileUploadViewModel: FileUploadViewModel = viewModel(factory = object : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return FileUploadViewModel(context) as T
-        }
-    })
-
-    LaunchedEffect(fileUploadViewModel.uploadState) {
-        fileUploadViewModel.uploadState.collect { state ->
-            when (state) {
-                is FileUploadState.Success -> {
-                    snackbarHostState.showSnackbar(state.message)
-                    viewModel.loadContent()
-                }
-                is FileUploadState.Error -> {
-                    snackbarHostState.showSnackbar(state.error)
-                }
-                else -> {}
-            }
-        }
-    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -178,13 +148,6 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Button(
-                    onClick = { showFilePicker = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Dodaj plik")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
                     onClick = { navController.navigate("manage_files/$courseId") },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -196,6 +159,16 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Dodaj quiz")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = { navController.navigate("quiz_stats/$courseId") },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Statystyki", color = MaterialTheme.colorScheme.onSecondary)
                 }
             }
 
@@ -281,7 +254,8 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
+                                        .padding(vertical = 8.dp)
+                                        .clickable { quiz.id?.let { navController.navigate("quiz_results/$it") } },
                                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                                 ) {
                                     Row(
@@ -336,20 +310,6 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                         }
                     }
                 }
-            }
-        }
-
-        if (showFilePicker) {
-            val filePickerLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.GetContent()
-            ) { uri: Uri? ->
-                uri?.let { uriNonNull ->
-                    fileUploadViewModel.uploadFile(courseId, uriNonNull, context)
-                }
-                showFilePicker = false
-            }
-            LaunchedEffect(Unit) {
-                filePickerLauncher.launch("*/*")
             }
         }
     }

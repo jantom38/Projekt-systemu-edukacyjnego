@@ -55,6 +55,7 @@ data class SubmissionResultDTO(
     val totalQuestions: Int,
     val percentage: Double
 )
+
 data class QuizListResponse(val success: Boolean, val quizzes: List<Quiz>)
 data class QuizResponse(
     val success: Boolean,
@@ -62,6 +63,35 @@ data class QuizResponse(
 )data class QuestionResponse(val success: Boolean, val message: String, val question: QuizQuestion)
 data class LoginRequest(val username: String, val password: String)
 data class LoginResponse(val success: Boolean, val token: String?)
+data class QuizStat(
+    val quizId: Long,
+    val quizTitle: String,
+    val attempts: Long,
+    val averageScore: Double
+)
+
+data class QuizDetailedResult(
+    val userId: Long,
+    val username: String,
+    val correctAnswers: Int,
+    val totalQuestions: Int,
+    val score: Double,
+    val completionDate: String,
+    val answers: List<Map<String, Any>>
+)
+
+data class QuizStatsResponse(
+    val success: Boolean,
+    val courseId: Long,
+    val stats: List<QuizStat>
+)
+
+data class QuizDetailedResultsResponse(
+    val success: Boolean,
+    val quizId: Long,
+    val quizTitle: String,
+    val results: List<QuizDetailedResult>
+)
 
 interface CourseApiService {
     @POST("/api/login")
@@ -129,6 +159,14 @@ interface CourseApiService {
     // W interfejsie CourseApiService
     @GET("/api/courses/quizzes/{quizId}/results")
     suspend fun getQuizResult(@Path("quizId") quizId: Long): Response<QuizResult>
+    // Nowe modele danych dla statystyk i szczegółowych wyników
+
+    @GET("/api/courses/{courseId}/quiz-stats")
+    suspend fun getCourseQuizStats(@Path("courseId") courseId: Long): Response<QuizStatsResponse>
+
+    @GET("/api/courses/quizzes/{quizId}/detailed-results")
+    suspend fun getQuizDetailedResults(@Path("quizId") quizId: Long): Response<QuizDetailedResultsResponse>
+
 }
 
 object RetrofitClient {

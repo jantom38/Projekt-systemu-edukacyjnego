@@ -92,6 +92,9 @@ fun TeacherScreen(navController: NavHostController) {
                             snackbarHostState.showSnackbar("Błąd: ${e.message}")
                         }
                     }
+                },
+                onViewStatsClick = { course ->
+                    navController.navigate("quiz_stats/${course.id}")
                 }
             )
         }
@@ -234,9 +237,8 @@ fun CourseListScreen(
     navController: NavHostController,
     courses: List<Course>,
     onCourseClick: (Course) -> Unit,
-    onAddFileClick: (Course) -> Unit = {},
-    onDeleteFileClick: (Course) -> Unit = {},
-    onDeleteCourseClick: ((Course) -> Unit)? = null
+    onDeleteCourseClick: ((Course) -> Unit)? = null,
+    onViewStatsClick: ((Course) -> Unit)? = null
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -256,13 +258,13 @@ fun CourseListScreen(
                         Spacer(Modifier.height(4.dp))
                         Text(it, style = MaterialTheme.typography.bodyMedium)
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
 
-                    if (onDeleteCourseClick != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
+                        if (onDeleteCourseClick != null) {
                             Button(
                                 onClick = { onDeleteCourseClick(course) },
                                 colors = ButtonDefaults.buttonColors(
@@ -279,72 +281,157 @@ fun CourseListScreen(
     }
 }
 
-// -------------------- (jeśli potrzebujesz też) MANAGE FILES SCREEN --------------------
-@Composable
-fun ManageFilesScreen(navController: NavHostController, courseId: Long) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var files by remember { mutableStateOf<List<CourseFile>>(emptyList()) }
-    val snackbarHostState = remember { SnackbarHostState() }
 
-    fun loadFiles() {
+// -------------------- (jeśli potrzebujesz też) }
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+fun TeacherQuizStatsScreen(navController: NavHostController, courseId: Long) {
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var quizStats by remember { mutableStateOf<List<QuizStat>>(emptyList()) }
+
+    fun loadQuizStats() {
         scope.launch(Dispatchers.IO) {
             try {
                 val api = RetrofitClient.getInstance(context)
-                val fetched = api.getCourseFiles(courseId)
-                files = fetched
-            } catch (e: Exception) {
-                Log.e("ManageFiles", "Błąd pobierania plików: ${e.message}")
-            }
-        }
-    }
-
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
-                items(items = files, key = { it.id }) { file ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(file.fileName, style = MaterialTheme.typography.bodyLarge)
-
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        try {
-                                            val api = RetrofitClient.getInstance(context)
-                                            val resp = api.deleteCourseFile(courseId, file.id)
-                                            if (resp.isSuccessful) {
-                                                snackbarHostState.showSnackbar("Plik usunięty")
-                                                loadFiles()
-                                            } else {
-                                                snackbarHostState.showSnackbar("Błąd usuwania pliku")
-                                                loadFiles()
-                                            }
-                                        } catch (e: Exception) {
-                                            snackbarHostState.showSnackbar("Wyjątek: ${e.message}")
-                                            loadFiles()
-                                        }
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
-                                )
-                            ) {
-                                Text("Usuń", color = MaterialTheme.colorScheme.onErrorContainer)
-                            }
-                        }
+                val response = api.getCourseQuizStats(courseId)
+                if (response.isSuccessful) {
+                    val statsResponse = response.body()
+                    withContext(Dispatchers.Main) {
+                        quizStats = statsResponse?.stats ?: emptyList()
                     }
+                } else {
+                    snackbarHostState.showSnackbar("Błąd pobierania statystyk: ${response.code()}")
                 }
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar("Błąd: ${e.message}")
             }
         }
     }
 
     LaunchedEffect(Unit) {
-        loadFiles()
+        loadQuizStats()
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Statystyki quizów") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            items(quizStats) { stat ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable { navController.navigate("quiz_results/${stat.quizId}") },
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(stat.quizTitle, style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Liczba prób: ${stat.attempts}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Średni wynik: ${String.format("%.1f%%", stat.averageScore)}", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Teacher Quiz Detailed Results Screen
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var results by remember { mutableStateOf<List<QuizDetailedResult>>(emptyList()) }
+    var quizTitle by remember { mutableStateOf("") }
+
+    fun loadQuizResults() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val api = RetrofitClient.getInstance(context)
+                val response = api.getQuizDetailedResults(quizId)
+                if (response.isSuccessful) {
+                    val resultsResponse = response.body()
+                    withContext(Dispatchers.Main) {
+                        quizTitle = resultsResponse?.quizTitle ?: ""
+                        results = resultsResponse?.results ?: emptyList()
+                    }
+                } else {
+                    snackbarHostState.showSnackbar("Błąd pobierania wyników: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar("Błąd: ${e.message}")
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        loadQuizResults()
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Wyniki quizu: $quizTitle") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            items(results) { result ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Użytkownik: ${result.username}", style = MaterialTheme.typography.titleMedium)
+                        Text("Wynik: ${result.correctAnswers}/${result.totalQuestions} (${String.format("%.1f%%", result.score)})")
+                        Text("Data: ${result.completionDate}", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Odpowiedzi:", style = MaterialTheme.typography.titleSmall)
+                        result.answers.forEach { answer ->
+                            val isCorrect = answer["isCorrect"] as Boolean
+                            Text(
+                                "${answer["questionText"]}: ${answer["userAnswer"]} (${if (isCorrect) "Poprawna" else "Niepoprawna"})",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (isCorrect) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
