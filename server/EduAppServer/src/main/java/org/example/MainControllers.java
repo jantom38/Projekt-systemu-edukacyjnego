@@ -861,4 +861,60 @@ public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
                 "expiresAt", expiresAt.toString()
         ));
     }
+
+    @PostMapping("/auth/register")
+    public ResponseEntity<?> registerUser(@RequestBody Map<String, String> request) {
+        log.info("Próba rejestracji użytkownika");
+
+        String username = request.get("username");
+        String password = request.get("password");
+        String roleCode = request.get("roleCode");
+
+        if (username == null || username.isBlank() || password == null || password.isBlank() || roleCode == null || roleCode.isBlank()) {
+            log.warn("Nieprawidłowe dane rejestracji: brak nazwy użytkownika, hasła lub kodu roli");
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Nazwa użytkownika, hasło i kod roli są wymagane"));
+        }
+
+        if (userRepository.findByUsername(username).isPresent()) {
+            log.warn("Nazwa użytkownika {} jest już zajęta", username);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Nazwa użytkownika jest już zajęta"));
+        }
+
+        return roleCodeRepository.findByCodeAndIsActiveTrue(roleCode)
+                .map(code -> {
+                    if (code.getExpiresAt().isBefore(LocalDateTime.now())) {
+                        log.warn("Kod {} wygasł", roleCode);
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("success", false, "message", "Kod wygasł"));
+                    }
+
+                    if (code.getRole() != UserRole.STUDENT) {
+                        log.warn("Kod {} nie jest przeznaczony dla roli STUDENT", roleCode);
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("success", false, "message", "Nieprawidłowy kod roli"));
+                    }
+
+                    User user = new User();
+                    user.setUsername(username);
+                    user.setPassword(passwordEncoder.encode(password));
+                    user.setRole(UserRole.STUDENT);
+                    userRepository.save(user);
+
+                    code.setActive(false);
+                    roleCodeRepository.save(code);
+
+                    log.info("Użytkownik {} zarejestrowany pomyślnie z rolą STUDENT", username);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "Rejestracja pomyślna"
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.warn("Nieprawidłowy lub nieaktywny kod roli: {}", roleCode);
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("success", false, "message", "Nieprawidłowy lub nieaktywny kod roli"));
+                });
+    }
 }
