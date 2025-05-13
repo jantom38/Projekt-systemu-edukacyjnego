@@ -199,7 +199,7 @@ interface CourseApiService {
     @GET("/api/courses/{courseId}/quiz-stats")
     suspend fun getCourseQuizStats(@Path("courseId") courseId: Long): Response<QuizStatsResponse>
 
-    @GET("/api/quizzes/{quizId}/detailed-results")
+    @GET("/api/courses/quizzes/{quizId}/detailed-results")
     suspend fun getQuizDetailedResults(@Path("quizId") quizId: Long): Response<QuizDetailedResultsResponse>
 }
 
