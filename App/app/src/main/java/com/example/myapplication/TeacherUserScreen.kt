@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -19,13 +22,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // -------------------- TEACHER SCREEN --------------------
-@Composable
+
+
+
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun TeacherScreen(navController: NavHostController) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var courses by remember { mutableStateOf<List<Course>>(emptyList()) }
+    var showCodeDialog by remember { mutableStateOf(false) }
+    var selectedValidity by remember { mutableStateOf("1_WEEK") }
+    var expanded by remember { mutableStateOf(false) }
+    var generatedCode by remember { mutableStateOf<String?>(null) }
+    var expiresAt by remember { mutableStateOf<String?>(null) }
+    var isGenerating by remember { mutableStateOf(false) }
 
     fun loadCourses() {
         scope.launch(Dispatchers.IO) {
@@ -37,6 +49,33 @@ fun TeacherScreen(navController: NavHostController) {
                 }
             } catch (e: Exception) {
                 snackbarHostState.showSnackbar("Błąd pobierania kursów: ${e.message}")
+            }
+        }
+    }
+
+    fun generateStudentCode() {
+        isGenerating = true
+        scope.launch(Dispatchers.IO) {
+            try {
+                val api = RetrofitClient.getInstance(context)
+                val request = GenerateCodeRequest(validity = selectedValidity)
+                val response = api.generateStudentCode(request)
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        generatedCode = response.body()?.code
+                        expiresAt = response.body()?.expiresAt
+                    } else {
+                        snackbarHostState.showSnackbar(
+                            response.body()?.message ?: "Błąd generowania kodu"
+                        )
+                    }
+                    isGenerating = false
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                    isGenerating = false
+                }
             }
         }
     }
@@ -60,6 +99,19 @@ fun TeacherScreen(navController: NavHostController) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
+                    }
+                },
+                actions = {
+                    TextButton(onClick = { showCodeDialog = true }) {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.AccountBox,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Generuj kod rejestracyjny")
+                        }
                     }
                 }
             )
@@ -98,9 +150,135 @@ fun TeacherScreen(navController: NavHostController) {
                 }
             )
         }
+
+        if (showCodeDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showCodeDialog = false
+                    generatedCode = null
+                    expiresAt = null
+                },
+                title = { Text("Generuj kod rejestracyjny") },
+                text = {
+                    Column {
+                        if (generatedCode == null) {
+                            Text("Wybierz czas ważności kodu:")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ExposedDropdownMenuBox(
+                                expanded = expanded,
+                                onExpandedChange = { expanded = !expanded }
+                            ) {
+                                OutlinedTextField(
+                                    value = when (selectedValidity) {
+                                        "1_HOUR" -> "1 godzina"
+                                        "2_HOURS" -> "2 godziny"
+                                        "1_DAY" -> "1 dzień"
+                                        else -> "1 tydzień"
+                                    },
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                    modifier = Modifier.menuAnchor()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("1 godzina") },
+                                        onClick = {
+                                            selectedValidity = "1_HOUR"
+                                            expanded = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("2 godziny") },
+                                        onClick = {
+                                            selectedValidity = "2_HOURS"
+                                            expanded = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("1 dzień") },
+                                        onClick = {
+                                            selectedValidity = "1_DAY"
+                                            expanded = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("1 tydzień") },
+                                        onClick = {
+                                            selectedValidity = "1_WEEK"
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        } else {
+                            Column {
+                                Text(
+                                    text = "Wygenerowany kod:",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Kod: $generatedCode",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                                Text(
+                                    text = "Ważny do: $expiresAt",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    if (generatedCode == null) {
+                        Button(
+                            onClick = { generateStudentCode() },
+                            enabled = !isGenerating
+                        ) {
+                            if (isGenerating) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            } else {
+                                Text("Generuj")
+                            }
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                showCodeDialog = false
+                                generatedCode = null
+                                expiresAt = null
+                            }
+                        ) {
+                            Text("Zamknij")
+                        }
+                    }
+                },
+                dismissButton = {
+                    if (generatedCode == null) {
+                        TextButton(
+                            onClick = {
+                                showCodeDialog = false
+                                generatedCode = null
+                                expiresAt = null
+                            }
+                        ) {
+                            Text("Anuluj")
+                        }
+                    }
+                }
+            )
+        }
     }
 }
-
 // -------------------- USER SCREEN --------------------
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)

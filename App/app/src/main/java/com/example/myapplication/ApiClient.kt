@@ -33,7 +33,6 @@ data class Quiz(
     val description: String? = null,
     val createdAt: String? = null,
     val questions: List<QuizQuestion> = emptyList()
-
 )
 data class Quizsolve(
     val id: Long,
@@ -65,21 +64,24 @@ data class SubmissionResultDTO(
     val totalQuestions: Int,
     val percentage: Double
 )
-
 data class QuizListResponse(val success: Boolean, val quizzes: List<Quiz>)
 data class QuizResponse(
     val success: Boolean,
     val quiz: Quiz
-)data class QuestionResponse(val success: Boolean, val message: String, val question: QuizQuestion)
+)
+data class QuestionResponse(val success: Boolean, val message: String, val question: QuizQuestion)
 data class LoginRequest(val username: String, val password: String)
-data class LoginResponse(val success: Boolean, val token: String?)
+data class LoginResponse(val success: Boolean, val token: String?, val role: String?)
+data class RegisterRequest(val username: String, val password: String, val roleCode: String)
+data class RegisterResponse(val success: Boolean, val message: String)
+data class GenerateCodeRequest(val validity: String)
+data class GenerateCodeResponse(val success: Boolean, val code: String, val expiresAt: String, val message: String)
 data class QuizStat(
     val quizId: Long,
     val quizTitle: String,
     val attempts: Long,
     val averageScore: Double
 )
-
 data class QuizDetailedResult(
     val userId: Long,
     val username: String,
@@ -89,13 +91,11 @@ data class QuizDetailedResult(
     val completionDate: String,
     val answers: List<Map<String, Any>>
 )
-
 data class QuizStatsResponse(
     val success: Boolean,
     val courseId: Long,
     val stats: List<QuizStat>
 )
-
 data class QuizDetailedResultsResponse(
     val success: Boolean,
     val quizId: Long,
@@ -106,15 +106,20 @@ data class CourseUsersResponse(
     val success: Boolean,
     val users: List<UserCourseInfo>
 )
-
 data class GenericResponse(
     val success: Boolean,
     val message: String
 )
 
 interface CourseApiService {
-    @POST("/api/login")
+    @POST("/api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
+    @POST("/api/courses/auth/register")
+    suspend fun register(@Body request: RegisterRequest): Response<RegisterResponse>
+
+    @POST("/api/courses/auth/generate-student-code")
+    suspend fun generateStudentCode(@Body request: GenerateCodeRequest): Response<GenerateCodeResponse>
 
     @GET("/api/courses")
     suspend fun getAllCourses(): List<Course>
@@ -131,7 +136,7 @@ interface CourseApiService {
     @POST("/api/courses")
     suspend fun createCourse(@Body course: Course): Response<Course>
 
-    @DELETE("api/courses/{id}")
+    @DELETE("/api/courses/{id}")
     suspend fun deleteCourse(@Path("id") id: Long): Response<Map<String, Any>>
 
     @GET("/api/courses/{courseId}/users")
@@ -144,6 +149,7 @@ interface CourseApiService {
         @Path("courseId") courseId: Long,
         @Path("userId") userId: Long
     ): Response<GenericResponse>
+
     @Multipart
     @POST("/api/courses/{courseId}/files/upload")
     suspend fun uploadFile(
@@ -160,7 +166,6 @@ interface CourseApiService {
     @GET("/api/courses/my-courses")
     suspend fun getUserCourses(): Map<String, Any>
 
-
     @GET("/api/courses/{id}/quizzes")
     suspend fun getCourseQuizzes(@Path("id") courseId: Long): QuizListResponse
 
@@ -170,37 +175,36 @@ interface CourseApiService {
         @Body quiz: Quiz
     ): Response<QuizResponse>
 
-    @POST("/api/courses/quizzes/{quizId}/questions")
+    @POST("/api/quizzes/{quizId}/questions")
     suspend fun createQuizQuestion(
         @Path("quizId") quizId: Long,
         @Body question: QuizQuestion
     ): Response<QuestionResponse>
-    @DELETE("/api/courses/quizzes/{quizId}")
+
+    @DELETE("/api/quizzes/{quizId}")
     suspend fun deleteQuiz(@Path("quizId") quizId: Long): Response<QuestionResponse>
-    @GET("/api/courses/quizzes/{quizId}")
+
+    @GET("/api/quizzes/{quizId}")
     suspend fun getQuiz(@Path("quizId") quizId: Long): Response<QuizResponse>
 
-    @POST("/api/courses/quizzes/{quizId}/submit")
+    @POST("/api/quizzes/{quizId}/submit")
     suspend fun submitQuizAnswers(
         @Path("quizId") quizId: Long,
         @Body answers: List<QuizAnswerDTO>
     ): Response<SubmissionResultDTO>
 
-    // W interfejsie CourseApiService
-    @GET("/api/courses/quizzes/{quizId}/results")
+    @GET("/api/quizzes/{quizId}/results")
     suspend fun getQuizResult(@Path("quizId") quizId: Long): Response<QuizResult>
-    // Nowe modele danych dla statystyk i szczegółowych wyników
 
     @GET("/api/courses/{courseId}/quiz-stats")
     suspend fun getCourseQuizStats(@Path("courseId") courseId: Long): Response<QuizStatsResponse>
 
-    @GET("/api/courses/quizzes/{quizId}/detailed-results")
+    @GET("/api/quizzes/{quizId}/detailed-results")
     suspend fun getQuizDetailedResults(@Path("quizId") quizId: Long): Response<QuizDetailedResultsResponse>
-
 }
 
 object RetrofitClient {
-    private const val BASE_URL = "http://10.0.2.2:8080/" // Dla emulatora
+    private const val BASE_URL = "http://10.0.2.2:8080/"
 
     fun getInstance(context: Context): CourseApiService {
         val okHttpClient = OkHttpClient.Builder()

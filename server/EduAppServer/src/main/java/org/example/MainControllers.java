@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.example.dto.QuizAnswerDTO;
 import org.example.dto.QuizQuestionDTO;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,13 +43,17 @@ private final UserCourseRepository userCourseRepository;
 private final QuizQuestionRepository quizQuestionRepository;
   private final QuizResultRepository quizResultRepository;
 private final QuizAnswerRepository quizAnswerRepository;
-
+private final RoleCodeRepository roleCodeRepository;
+    private final PasswordEncoder passwordEncoder;
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int CODE_LENGTH = 6;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
 @Autowired
 public MainControllers(CourseRepository courseRepository,
                        CourseFileRepository courseFileRepository,
                        UserRepository userRepository,
-                       QuizRepository quizRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, QuizResultRepository quizResultRepository, QuizAnswerRepository quizAnswerRepository) {
+                       QuizRepository quizRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, QuizResultRepository quizResultRepository, QuizAnswerRepository quizAnswerRepository, RoleCodeRepository roleCodeRepository, PasswordEncoder passwordEncoder) {
     this.courseRepository = courseRepository;
     this.courseFileRepository = courseFileRepository;
     this.userRepository = userRepository;
@@ -56,7 +63,16 @@ public MainControllers(CourseRepository courseRepository,
     this.quizQuestionRepository = quizQuestionRepository;
     this.quizResultRepository = quizResultRepository;
     this.quizAnswerRepository = quizAnswerRepository;
+    this.roleCodeRepository = roleCodeRepository;
+    this.passwordEncoder = passwordEncoder;
 }
+    private String generateRandomCode() {
+        StringBuilder code = new StringBuilder(CODE_LENGTH);
+        for (int i = 0; i < CODE_LENGTH; i++) {
+            code.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
+        }
+        return code.toString();
+    }
 
 private String currentUsername() {
     return SecurityContextHolder.getContext().getAuthentication().getName();
@@ -785,6 +801,64 @@ public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Użytkownik został usunięty z kursu"
+        ));
+    }
+    @PostMapping("/auth/generate-student-code")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> generateStudentCode(@RequestBody Map<String, String> request) {
+        log.info("Próba wygenerowania kodu dla roli STUDENT przez nauczyciela {}", currentUsername());
+
+        String validityStr = request.get("validity");
+        if (validityStr == null || validityStr.isBlank()) {
+            log.warn("Brak parametru validity w żądaniu");
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Parametr validity jest wymagany"));
+        }
+
+        CodeValidity validity;
+        try {
+            validity = CodeValidity.fromValue(validityStr);
+        } catch (IllegalArgumentException e) {
+            log.warn("Nieprawidłowa wartość validity: {}", validityStr);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Nieprawidłowa wartość validity. Dozwolone: 1_HOUR, 2_HOURS, 1_DAY, 1_WEEK"));
+        }
+
+        User teacher = userRepository.findByUsername(currentUsername())
+                .orElseThrow(() -> new RuntimeException("Nauczyciel nie znaleziony"));
+
+        String code;
+        int attempts = 0;
+        final int maxAttempts = 10;
+        do {
+            code = generateRandomCode();
+            attempts++;
+            if (attempts > maxAttempts) {
+                log.error("Nie udało się wygenerować unikalnego kodu po {} próbach", maxAttempts);
+                return ResponseEntity.internalServerError()
+                        .body(Map.of("success", false, "message", "Nie udało się wygenerować unikalnego kodu"));
+            }
+        } while (roleCodeRepository.findByCodeAndIsActiveTrue(code).isPresent());
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = now.plusHours(validity.getHours());
+
+        RoleCode roleCode = new RoleCode(
+                code,
+                UserRole.STUDENT,
+                teacher,
+                now,
+                expiresAt
+        );
+
+        roleCodeRepository.save(roleCode);
+        log.info("Wygenerowano kod {} dla roli STUDENT, ważny do {}", code, expiresAt);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Kod dla studenta wygenerowany pomyślnie",
+                "code", code,
+                "expiresAt", expiresAt.toString()
         ));
     }
 }

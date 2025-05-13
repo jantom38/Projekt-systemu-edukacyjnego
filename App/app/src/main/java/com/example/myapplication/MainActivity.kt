@@ -21,6 +21,7 @@ import com.example.myapplication.files.CourseFilesScreen
 import com.example.myapplication.files.ManageFilesScreen
 import com.example.myapplication.login.LoginScreen
 import com.example.myapplication.login.MenuScreen
+import com.example.myapplication.login.RegisterScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -41,6 +42,7 @@ fun EduApp() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "login") {
         composable("login") { LoginScreen(navController) }
+        composable("register") { RegisterScreen(navController) }
         composable("courses") { CourseListScreen(navController) }
         composable("user") { UserScreen(navController) }
         composable("teacher") { TeacherScreen(navController) }
