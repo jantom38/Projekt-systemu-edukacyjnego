@@ -1,5 +1,5 @@
 // app/src/main/java/com/example/myapplication/ui/MenuScreen.kt
-package com.example.myapplication
+package com.example.myapplication.login
 
 import android.content.Context
 import androidx.compose.foundation.layout.*

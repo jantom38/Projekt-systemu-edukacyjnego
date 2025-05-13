@@ -1,17 +1,19 @@
-package com.example.myapplication
+package com.example.myapplication.files
 
 import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.RetrofitClient
+import com.example.myapplication.getFileName
+import com.example.myapplication.toFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
 import java.io.IOException
 
 class FileUploadViewModel(context: Context) : ViewModel() {

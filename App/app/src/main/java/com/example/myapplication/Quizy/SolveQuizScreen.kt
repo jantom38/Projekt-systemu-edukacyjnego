@@ -1,12 +1,9 @@
-package com.example.myapplication
+package com.example.myapplication.Quizy
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +15,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.google.gson.Gson
+import com.example.myapplication.Quiz
+import com.example.myapplication.QuizAnswerDTO
+import com.example.myapplication.QuizQuestion
+import com.example.myapplication.RetrofitClient
+import com.example.myapplication.SubmissionResultDTO
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.collections.get
 
 @Composable
 fun SolveQuizScreen(navController: NavHostController, quizId: Long) {
@@ -90,7 +91,8 @@ fun SolveQuizScreen(navController: NavHostController, quizId: Long) {
                             QuestionItem(
                                 question = question,
                                 index = index + 1,
-                                selectedAnswers = viewModel.selectedAnswers.value[question.id] ?: emptyList(),
+                                selectedAnswers = viewModel.selectedAnswers.value[question.id]
+                                    ?: emptyList(),
                                 onAnswerSelected = { answers ->
                                     viewModel.onAnswerSelected(question.id!!, answers)
                                 }

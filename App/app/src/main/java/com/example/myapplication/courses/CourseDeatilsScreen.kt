@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.courses
 
 import android.content.Context
 import android.util.Log
@@ -20,6 +20,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.myapplication.files.CourseFile
+import com.example.myapplication.files.FileCard
+import com.example.myapplication.Quiz
+import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
@@ -107,6 +111,7 @@ class CourseDetailsViewModel(context: Context, private val courseId: Long) : Vie
             }
         }
     }
+
 }
 //
 // EKRAN TEACHER DOTYCZĄCY OBSŁUGI PLIKÓW I QUIZOW 
@@ -172,6 +177,10 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                 ) {
                     Text("Statystyki", color = MaterialTheme.colorScheme.onSecondary)
                 }
+                Button(
+                    onClick = { navController.navigate("manage_users/$courseId") },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Zarządzaj użytkownikami") }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

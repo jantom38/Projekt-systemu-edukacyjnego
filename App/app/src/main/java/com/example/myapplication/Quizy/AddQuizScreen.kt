@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.Quizy
 
 import android.util.Log
 import androidx.compose.foundation.layout.*
@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.myapplication.Quiz
+import com.example.myapplication.QuizQuestion
+import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -298,7 +301,9 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                         coroutineScope.launch {
                             try {
                                 val api = RetrofitClient.getInstance(context)
-                                val quiz = Quiz(title = title, description = description.takeIf { it.isNotBlank() })
+                                val quiz = Quiz(
+                                    title = title,
+                                    description = description.takeIf { it.isNotBlank() })
                                 Log.d("AddQuiz", "Wysyłanie quizu: $quiz dla kursu ID: $courseId")
                                 val quizResponse = api.createQuiz(courseId, quiz)
                                 Log.d("AddQuiz", "Odpowiedź serwera dla quizu: ${quizResponse.code()}, body: ${quizResponse.body()}")
@@ -339,7 +344,11 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                                             val questionToSave = QuizQuestion(
                                                 questionText = q.questionText,
                                                 questionType = q.questionType,
-                                                options = if (q.questionType in listOf("multiple_choice", "true_false")) q.options else emptyMap(),
+                                                options = if (q.questionType in listOf(
+                                                        "multiple_choice",
+                                                        "true_false"
+                                                    )
+                                                ) q.options else emptyMap(),
                                                 correctAnswer = q.correctAnswers.joinToString(","),
                                                 quizId = quizId
                                             )

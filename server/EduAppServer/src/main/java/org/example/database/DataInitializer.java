@@ -41,9 +41,16 @@ public class DataInitializer {
 
     private void initUsers() {
         if (userRepository.findByUsername("user").isEmpty()) {
+            User student = new User();
+            student.setUsername("user");
+            student.setPassword(passwordEncoder.encode("user"));
+            student.setRole(UserRole.STUDENT);
+            userRepository.save(student);
+        }
+        if (userRepository.findByUsername("user2").isEmpty()) {
             User admin = new User();
-            admin.setUsername("user");
-            admin.setPassword(passwordEncoder.encode("password"));
+            admin.setUsername("user2");
+            admin.setPassword(passwordEncoder.encode("user"));
             admin.setRole(UserRole.STUDENT);
             userRepository.save(admin);
         }
@@ -89,3 +96,13 @@ public class DataInitializer {
     }
 
         }
+// pliki do kursu nauczycieli
+//INSERT INTO course_file (file_name, file_url, course_id) VALUES
+//('I. Regulacje prawne.doc', '/files/I. Regulacje prawne.doc', 2),
+//        ('II. Ocena zagrożeń.doc', '/files/II. Ocena zagrożeń.doc', 2),
+//        ('III. Organ. stanowisk pracy.doc', '/files/III. Organ. stanowisk pracy.doc', 2),
+//        ('IV. Wypadki, choroby zaw..doc', '/files/IV. Wypadki, choroby zaw..doc', 2),
+//        ('V. Ochrona ppoż..doc', '/files/V. Ochrona ppoż..doc', 2),
+//        ('AED + BHP2.docx', '/files/AED + BHP2.docx', 2),
+//        ('Ma. Charakterystyczne wypadki w PŚk..docx', '/files/Ma. Charakterystyczne wypadki w PŚk..docx', 2),
+//        ('System udzielania I pomocy w PŚk.docx', '/files/System udzielania I pomocy w PŚk.docx', 2);

@@ -2,6 +2,9 @@ package com.example.myapplication
 
 import android.content.Context
 import android.util.Log
+import com.example.myapplication.Quizy.QuizResult
+import com.example.myapplication.courses.Course
+import com.example.myapplication.files.CourseFile
 import com.google.gson.annotations.SerializedName
 import okhttp3.Interceptor
 import okhttp3.MultipartBody
@@ -13,6 +16,13 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 
 // Modele danych
+data class UserCourseInfo(
+    val id: Long,
+    val username: String,
+    val role: String,
+    val joinedAt: String
+)
+
 data class QuizAnswerDTO(
     val questionId: Long,
     val answer: String
@@ -92,6 +102,15 @@ data class QuizDetailedResultsResponse(
     val quizTitle: String,
     val results: List<QuizDetailedResult>
 )
+data class CourseUsersResponse(
+    val success: Boolean,
+    val users: List<UserCourseInfo>
+)
+
+data class GenericResponse(
+    val success: Boolean,
+    val message: String
+)
 
 interface CourseApiService {
     @POST("/api/login")
@@ -115,6 +134,16 @@ interface CourseApiService {
     @DELETE("api/courses/{id}")
     suspend fun deleteCourse(@Path("id") id: Long): Response<Map<String, Any>>
 
+    @GET("/api/courses/{courseId}/users")
+    suspend fun getCourseUsers(
+        @Path("courseId") courseId: Long
+    ): CourseUsersResponse
+
+    @DELETE("/api/courses/{courseId}/users/{userId}")
+    suspend fun removeUserFromCourse(
+        @Path("courseId") courseId: Long,
+        @Path("userId") userId: Long
+    ): Response<GenericResponse>
     @Multipart
     @POST("/api/courses/{courseId}/files/upload")
     suspend fun uploadFile(
@@ -130,6 +159,7 @@ interface CourseApiService {
 
     @GET("/api/courses/my-courses")
     suspend fun getUserCourses(): Map<String, Any>
+
 
     @GET("/api/courses/{id}/quizzes")
     suspend fun getCourseQuizzes(@Path("id") courseId: Long): QuizListResponse

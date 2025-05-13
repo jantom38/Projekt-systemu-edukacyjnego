@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.files
 
 import android.content.Context
 import android.content.Intent
@@ -26,6 +26,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.myapplication.Quiz
+import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

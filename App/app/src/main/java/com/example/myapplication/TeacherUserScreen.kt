@@ -1,6 +1,5 @@
 package com.example.myapplication
 
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.myapplication.courses.Course
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -210,7 +210,11 @@ fun AddCourseScreen(navController: NavHostController) {
                         try {
                             val api = RetrofitClient.getInstance(context)
                             val response = api.createCourse(
-                                Course(courseName = courseName, description = description, accessKey = accessKey)
+                                Course(
+                                    courseName = courseName,
+                                    description = description,
+                                    accessKey = accessKey
+                                )
                             )
                             if (response.isSuccessful) {
                                 snackbarHostState.showSnackbar("Kurs dodany")

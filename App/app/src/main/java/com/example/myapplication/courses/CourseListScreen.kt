@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.courses
 
 import android.content.Context
 import android.util.Log
@@ -16,7 +16,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 data class Course(
     val id: Long = 0,
@@ -50,7 +52,7 @@ class CourseViewModel(context: Context) : ViewModel() {
                 _courses.value = apiService.getAllCourses()
                 _error.value = null
                 Log.d("CourseViewModel", "Kursy załadowane: ${_courses.value}")
-            } catch (e: retrofit2.HttpException) {
+            } catch (e: HttpException) {
                 _error.value = when (e.code()) {
                     401 -> "Brak autoryzacji. Zaloguj się ponownie."
                     403 -> "Brak uprawnień do kursów."

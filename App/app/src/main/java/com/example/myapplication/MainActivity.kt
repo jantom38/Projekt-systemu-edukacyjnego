@@ -6,10 +6,21 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.example.myapplication.Quizy.AddQuizScreen
+import com.example.myapplication.Quizy.QuizResultScreen
+import com.example.myapplication.Quizy.SolveQuizScreen
+import com.example.myapplication.courses.AccessKeyScreen
+import com.example.myapplication.courses.CourseDetailsScreen
+import com.example.myapplication.courses.CourseListScreen
+import com.example.myapplication.courses.CourseUsersScreen
+import com.example.myapplication.courses.MyCoursesScreen
+import com.example.myapplication.files.CourseFilesScreen
+import com.example.myapplication.files.ManageFilesScreen
+import com.example.myapplication.login.LoginScreen
+import com.example.myapplication.login.MenuScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -59,7 +70,13 @@ fun EduApp() {
             }
         }
 
-
+        composable(
+            "manage_users/{courseId}",
+            arguments = listOf(navArgument("courseId") { type = NavType.LongType })
+        ) { backStack ->
+            val courseId = backStack.arguments!!.getLong("courseId")
+            CourseUsersScreen(navController, courseId)
+        }
         composable("menu") { MenuScreen(navController) }
         composable("available_courses") { UserScreen(navController) }
         composable(
