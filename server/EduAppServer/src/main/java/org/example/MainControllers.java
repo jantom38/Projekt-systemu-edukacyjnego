@@ -720,4 +720,71 @@ public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
                             "message", "Quiz not found"));
                 });
     }
+    @GetMapping("/{courseId}/users")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> getCourseUsers(@PathVariable Long courseId) {
+        log.info("Pobieranie użytkowników kursu ID: {} przez nauczyciela {}", courseId, currentUsername());
+
+        // Sprawdź czy nauczyciel ma dostęp do kursu
+        Course course = courseRepository.findByIdAndTeacherUsername(courseId, currentUsername())
+                .orElseThrow(() -> {
+                    log.warn("Brak dostępu do kursu ID: {} dla nauczyciela {}", courseId, currentUsername());
+                    return new RuntimeException("Brak uprawnień lub kurs nie istnieje");
+                });
+
+        // Pobierz wszystkich użytkowników kursu
+        List<UserCourse> userCourses = userCourseRepository.findByCourseId(courseId);
+
+        // Mapowanie do formatu odpowiedzi
+        List<Map<String, Object>> users = userCourses.stream()
+                .map(uc -> {
+                    User user = uc.getUser();
+                    Map<String, Object> userMap = new HashMap<>();
+                    userMap.put("id", user.getId());
+                    userMap.put("username", user.getUsername());
+                    userMap.put("role", user.getRole().name());
+                    userMap.put("joinedAt", uc.getJoinedAt());
+                    return userMap;
+                })
+                .collect(Collectors.toList());
+
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "users", users
+        ));
+    }
+
+    @DeleteMapping("/{courseId}/users/{userId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Transactional
+    public ResponseEntity<?> removeUserFromCourse(@PathVariable Long courseId,
+                                                  @PathVariable Long userId) {
+        log.info("Próba usunięcia użytkownika ID: {} z kursu ID: {} przez {}", userId, courseId, currentUsername());
+
+        // Sprawdź czy nauczyciel ma dostęp do kursu
+        courseRepository.findByIdAndTeacherUsername(courseId, currentUsername())
+                .orElseThrow(() -> {
+                    log.warn("Brak dostępu do kursu ID: {} dla nauczyciela {}", courseId, currentUsername());
+                    return new RuntimeException("Brak uprawnień lub kurs nie istnieje");
+                });
+
+        // Znajdź i usuń przypisanie użytkownika do kursu
+        userCourseRepository.findByUserIdAndCourseId(userId, courseId)
+                .ifPresentOrElse(
+                        userCourse -> {
+                            userCourseRepository.delete(userCourse);
+                            log.info("Usunięto użytkownika ID: {} z kursu ID: {}", userId, courseId);
+                        },
+                        () -> {
+                            log.warn("Użytkownik ID: {} nie jest przypisany do kursu ID: {}", userId, courseId);
+                            throw new RuntimeException("Użytkownik nie jest przypisany do tego kursu");
+                        }
+                );
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Użytkownik został usunięty z kursu"
+        ));
+    }
 }

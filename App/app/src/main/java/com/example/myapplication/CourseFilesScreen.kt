@@ -15,6 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.core.content.FileProvider
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -22,7 +26,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.net.URLConnection
 
@@ -83,7 +90,7 @@ class CourseFilesViewModel(context: Context, private val courseId: Long) : ViewM
         }
     }
 }
-
+///screen usera do wyswietlania plikow
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
@@ -165,40 +172,6 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
         }
     }
 }
-@Composable
-fun FileCard(file: CourseFile, context: Context) {
-    val baseUrl = "http://192.168.24.18:8080"
-    val fullUrl = "$baseUrl${file.fileUrl}"
-    val mimeType = URLConnection.guessContentTypeFromName(file.fileName) ?: "*/*"
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(Uri.parse(fullUrl), mimeType)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    context.startActivity(intent)
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Nie można otworzyć pliku: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                }
-            },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = file.fileName, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = fullUrl,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 
 @Composable
 private fun FilesTab(files: List<CourseFile>, context: Context) {
@@ -215,7 +188,7 @@ private fun FilesTab(files: List<CourseFile>, context: Context) {
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             items(files) { file ->
-                FileCard(file = file, context = context)
+                FileCard(file = file,context = context)
             }
         }
     }
@@ -290,5 +263,138 @@ fun QuizCard(quiz: Quiz, navController: NavHostController) {
 //            }
 //        }
 //    }
+
+fun openFileWithProvider(context: Context, fileUrl: String, fileName: String) {
+    val cacheFile = File(context.cacheDir, fileName)
+    if (!cacheFile.exists()) {
+        try {
+            val url = URL(fileUrl)
+            (url.openConnection() as HttpURLConnection).apply {
+                connect()
+                inputStream.use { input ->
+                    cacheFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                disconnect()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace() // loguje do Logcat
+            Toast.makeText(context, "Błąd pobierania: ${e.message ?: "nieznany"}", Toast.LENGTH_LONG).show()
+            return
+        }
+
+    }
+
+    val uri: Uri = FileProvider.getUriForFile(
+        context,
+        "com.example.myapplication.fileprovider", // authorities z AndroidManifest
+        cacheFile
+    )
+    val mimeType = URLConnection.guessContentTypeFromName(fileName) ?: "*/*"
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, mimeType)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Brak aplikacji do otwarcia: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+
+
+fun getMimeType(fileName: String): String {
+    return when (fileName.substringAfterLast('.', "").lowercase()) {
+        "pdf"   -> "application/pdf"
+        "doc"   -> "application/msword"
+        "docx"  -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "xls"   -> "application/vnd.ms-excel"
+        "xlsx"  -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "ppt"   -> "application/vnd.ms-powerpoint"
+        "pptx"  -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        "jpg", "jpeg" -> "image/jpeg"
+        "png"   -> "image/png"
+        else     -> URLConnection.guessContentTypeFromName(fileName) ?: "*/*"
+    }
+}
+
+// Helper: pobiera plik w tle i otwiera po pobraniu
+fun fetchAndOpenFile(context: Context, fileUrl: String, fileName: String) {
+    CoroutineScope(Dispatchers.IO).launch {
+        val cacheFile = File(context.cacheDir, fileName)
+        try {
+            if (!cacheFile.exists()) {
+                Log.d("FileDebug", "Pobieram plik z: $fileUrl")
+                val url = URL(fileUrl)
+                (url.openConnection() as HttpURLConnection).apply {
+                    connect()
+                    inputStream.use { input ->
+                        cacheFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    disconnect()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("FileDebug", "Błąd pobierania", e)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Błąd pobierania: ${e.message ?: "nieznany"}", Toast.LENGTH_LONG).show()
+            }
+            return@launch
+        }
+
+        // Po pobraniu: otwórz plik na głównym wątku
+        withContext(Dispatchers.Main) {
+            try {
+                val uri: Uri = FileProvider.getUriForFile(
+                    context,
+                    "com.example.myapplication.fileprovider",
+                    cacheFile
+                )
+                val mimeType = getMimeType(fileName)
+                val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, mimeType)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                // Sprawdź czy jest aplikacja
+                val chooser = Intent.createChooser(viewIntent, "Wybierz aplikację do otwarcia")
+                if (viewIntent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(chooser)
+                } else {
+                    Toast.makeText(context, "Brak aplikacji do otwarcia pliku", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e("FileDebug", "Błąd otwierania", e)
+                Toast.makeText(context, "Nie można otworzyć: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
+
+@Composable
+fun FileCard(file: CourseFile, context: Context) {
+    val baseUrl = "http://10.0.2.2:8080"
+    val fullUrl = "$baseUrl${file.fileUrl}"
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable {
+                fetchAndOpenFile(context, fullUrl, file.fileName)
+            },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = file.fileName)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = fullUrl)
+        }
+    }
+}
+
 
 

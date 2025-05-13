@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<paths>
-    <files-path name="files" path="." />
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- cache-dir -->
+    <cache-path name="cache" path="." />
+    <!-- external-files (np. getExternalFilesDir) -->
     <external-files-path name="external_files" path="." />
 </paths>

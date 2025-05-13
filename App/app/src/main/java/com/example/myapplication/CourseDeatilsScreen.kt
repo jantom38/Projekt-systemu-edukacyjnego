@@ -108,7 +108,9 @@ class CourseDetailsViewModel(context: Context, private val courseId: Long) : Vie
         }
     }
 }
-
+//
+// EKRAN TEACHER DOTYCZĄCY OBSŁUGI PLIKÓW I QUIZOW 
+//
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {

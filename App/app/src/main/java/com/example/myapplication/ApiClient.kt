@@ -170,7 +170,7 @@ interface CourseApiService {
 }
 
 object RetrofitClient {
-    private const val BASE_URL = "http://192.168.24.18:8080/" // Dla emulatora
+    private const val BASE_URL = "http://10.0.2.2:8080/" // Dla emulatora
 
     fun getInstance(context: Context): CourseApiService {
         val okHttpClient = OkHttpClient.Builder()
