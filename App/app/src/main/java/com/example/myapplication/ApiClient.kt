@@ -175,25 +175,25 @@ interface CourseApiService {
         @Body quiz: Quiz
     ): Response<QuizResponse>
 
-    @POST("/api/quizzes/{quizId}/questions")
+    @POST("/api/courses/quizzes/{quizId}/questions")
     suspend fun createQuizQuestion(
         @Path("quizId") quizId: Long,
         @Body question: QuizQuestion
     ): Response<QuestionResponse>
 
-    @DELETE("/api/quizzes/{quizId}")
+    @DELETE("/api/courses/quizzes/{quizId}")
     suspend fun deleteQuiz(@Path("quizId") quizId: Long): Response<QuestionResponse>
 
-    @GET("/api/quizzes/{quizId}")
+    @GET("/api/courses/quizzes/{quizId}")
     suspend fun getQuiz(@Path("quizId") quizId: Long): Response<QuizResponse>
 
-    @POST("/api/quizzes/{quizId}/submit")
+    @POST("/api/courses/quizzes/{quizId}/submit")
     suspend fun submitQuizAnswers(
         @Path("quizId") quizId: Long,
         @Body answers: List<QuizAnswerDTO>
     ): Response<SubmissionResultDTO>
 
-    @GET("/api/quizzes/{quizId}/results")
+    @GET ("/api/courses/quizzes/{quizId}/results")
     suspend fun getQuizResult(@Path("quizId") quizId: Long): Response<QuizResult>
 
     @GET("/api/courses/{courseId}/quiz-stats")
