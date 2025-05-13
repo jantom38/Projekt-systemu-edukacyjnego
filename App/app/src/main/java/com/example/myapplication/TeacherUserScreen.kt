@@ -20,8 +20,12 @@ import com.example.myapplication.courses.Course
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 // -------------------- TEACHER SCREEN --------------------
+
 
 
 
@@ -50,6 +54,19 @@ fun TeacherScreen(navController: NavHostController) {
             } catch (e: Exception) {
                 snackbarHostState.showSnackbar("Błąd pobierania kursów: ${e.message}")
             }
+        }
+    }
+
+    fun formatExpiresAt(isoDateTime: String?): String {
+        if (isoDateTime == null) return "Nieznana data"
+        return try {
+            val dateTime = LocalDateTime.parse(isoDateTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            val formatter = DateTimeFormatter
+                .ofPattern("d MMMM yyyy, HH:mm")
+                .withLocale(Locale("pl", "PL"))
+            dateTime.format(formatter)
+        } catch (e: Exception) {
+            isoDateTime // Fallback na oryginalny ciąg w razie błędu
         }
     }
 
@@ -227,7 +244,7 @@ fun TeacherScreen(navController: NavHostController) {
                                     modifier = Modifier.padding(8.dp)
                                 )
                                 Text(
-                                    text = "Ważny do: $expiresAt",
+                                    text = "Ważny do: ${formatExpiresAt(expiresAt)}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.padding(8.dp)
                                 )
