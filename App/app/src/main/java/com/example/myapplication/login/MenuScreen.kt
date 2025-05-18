@@ -1,6 +1,7 @@
 package com.example.myapplication.login
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -15,6 +16,7 @@ fun MenuScreen(navController: NavHostController) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
     val userRole = sharedPreferences.getString("user_role", "") ?: ""
+    Log.d("MenuScreen", "Odczytana rola: $userRole")
 
     Scaffold { padding ->
         Column(
@@ -29,25 +31,30 @@ fun MenuScreen(navController: NavHostController) {
 
             if (userRole == "ADMIN") {
                 Button(
-                    onClick = { navController.navigate("admin") },
+                    onClick = {
+                        Log.d("MenuScreen", "Kliknięto 'Panel administracyjny', rola: $userRole")
+                        navController.navigate("admin_teacher")
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Panel administracyjny")
                 }
-            }
-
-            Button(
-                onClick = { navController.navigate("available_courses") },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Lista dostępnych kursów")
-            }
-
-            Button(
-                onClick = { navController.navigate("my_courses") },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Twoje kursy")
+            } else {
+                Button(
+                    onClick = { navController.navigate("available_courses") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Lista dostępnych kursów")
+                }
+                Button(
+                    onClick = {
+                        Log.d("MenuScreen", "Kliknięto 'Moje kursy', rola: $userRole")
+                        navController.navigate("my_courses")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Moje kursy")
+                }
             }
 
             Button(

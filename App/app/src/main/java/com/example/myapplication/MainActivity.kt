@@ -47,6 +47,7 @@ fun EduApp() {
         composable("user") { UserScreen(navController) }
         composable("teacher") { TeacherScreen(navController) }
         composable("admin") { AdminScreen(navController) }
+        composable("admin_teacher") { AdminTeacherScreen(navController) }
         composable("add_course") { AddCourseScreen(navController) }
         composable(
             "manage_files/{courseId}",

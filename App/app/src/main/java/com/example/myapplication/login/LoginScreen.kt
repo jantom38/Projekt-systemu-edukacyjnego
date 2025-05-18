@@ -1,6 +1,7 @@
 package com.example.myapplication.login
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -76,6 +77,7 @@ fun LoginScreen(navController: NavHostController) {
                     onSuccess = { role, message ->
                         isLoading = false
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        Log.d("LoginScreen", "Przekierowanie po zalogowaniu, rola: $role")
                         when (role) {
                             "TEACHER" -> navController.navigate("teacher") {
                                 popUpTo("login") { inclusive = true }
@@ -88,6 +90,7 @@ fun LoginScreen(navController: NavHostController) {
                     onError = { errorMessage ->
                         isLoading = false
                         Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                        Log.e("LoginScreen", "Błąd logowania: $errorMessage")
                     }
                 )
             },
@@ -250,12 +253,15 @@ private fun authenticateUser(
                 connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
             }
 
+            Log.d("LoginScreen", "Odpowiedź serwera: $response")
+
             when (responseCode) {
                 HttpURLConnection.HTTP_OK -> {
                     val responseJson = JSONObject(response)
                     if (responseJson.getBoolean("success")) {
                         val token = responseJson.getString("token")
                         val role = responseJson.getString("role")
+                        Log.d("LoginScreen", "Zapis roli: $role")
                         saveToken(context, token, role)
                         withContext(Dispatchers.Main) {
                             onSuccess(role, responseJson.getString("message"))
@@ -280,6 +286,7 @@ private fun authenticateUser(
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
                 onError("Błąd połączenia: ${e.message ?: "Nieznany błąd"}")
+                Log.e("LoginScreen", "Wyjątek: ${e.message}")
             }
         } finally {
             connection?.disconnect()
@@ -323,4 +330,5 @@ private fun saveToken(context: Context, token: String, role: String) {
         .putString("jwt_token", token)
         .putString("user_role", role)
         .apply()
+    Log.d("LoginScreen", "Zapisano w SharedPreferences: token=$token, role=$role")
 }
