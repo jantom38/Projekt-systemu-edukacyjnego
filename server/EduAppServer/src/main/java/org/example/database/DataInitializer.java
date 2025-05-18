@@ -47,11 +47,11 @@ public class DataInitializer {
             student.setRole(UserRole.STUDENT);
             userRepository.save(student);
         }
-        if (userRepository.findByUsername("user2").isEmpty()) {
+        if (userRepository.findByUsername("user3").isEmpty()) {
             User admin = new User();
-            admin.setUsername("user2");
+            admin.setUsername("user3");
             admin.setPassword(passwordEncoder.encode("user"));
-            admin.setRole(UserRole.STUDENT);
+            admin.setRole(UserRole.ADMIN);
             userRepository.save(admin);
         }
 

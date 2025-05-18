@@ -46,6 +46,7 @@ fun EduApp() {
         composable("courses") { CourseListScreen(navController) }
         composable("user") { UserScreen(navController) }
         composable("teacher") { TeacherScreen(navController) }
+        composable("admin") { AdminScreen(navController) }
         composable("add_course") { AddCourseScreen(navController) }
         composable(
             "manage_files/{courseId}",
@@ -71,7 +72,6 @@ fun EduApp() {
                 navController.popBackStack("menu", false)
             }
         }
-
         composable(
             "manage_users/{courseId}",
             arguments = listOf(navArgument("courseId") { type = NavType.LongType })
@@ -123,8 +123,5 @@ fun EduApp() {
             val quizId = backStackEntry.arguments?.getLong("quizId") ?: return@composable
             TeacherQuizResultsScreen(navController, quizId)
         }
-
-
     }
-
 }

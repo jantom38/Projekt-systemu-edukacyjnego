@@ -10,9 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.myapplication.RetrofitClient
 import com.example.myapplication.RegisterRequest
-import com.example.myapplication.RegisterResponse
+import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -257,7 +256,7 @@ private fun authenticateUser(
                     if (responseJson.getBoolean("success")) {
                         val token = responseJson.getString("token")
                         val role = responseJson.getString("role")
-                        saveToken(context, token)
+                        saveToken(context, token, role)
                         withContext(Dispatchers.Main) {
                             onSuccess(role, responseJson.getString("message"))
                         }
@@ -318,7 +317,10 @@ private fun registerUser(
     }
 }
 
-private fun saveToken(context: Context, token: String) {
+private fun saveToken(context: Context, token: String, role: String) {
     val sharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-    sharedPreferences.edit().putString("jwt_token", token).apply()
+    sharedPreferences.edit()
+        .putString("jwt_token", token)
+        .putString("user_role", role)
+        .apply()
 }

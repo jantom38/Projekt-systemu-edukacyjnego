@@ -30,7 +30,7 @@ public class RoleCode {
     private boolean isActive = true;
 
     public RoleCode() {}
-
+//tworzenie klucza do rejestracji
     public RoleCode(String code, UserRole role, User creator, LocalDateTime createdAt, LocalDateTime expiresAt) {
         this.code = code;
         this.role = role;

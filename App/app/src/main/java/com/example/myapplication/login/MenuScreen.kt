@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/myapplication/ui/MenuScreen.kt
 package com.example.myapplication.login
 
 import android.content.Context
@@ -14,6 +13,8 @@ import androidx.navigation.NavHostController
 @Composable
 fun MenuScreen(navController: NavHostController) {
     val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+    val userRole = sharedPreferences.getString("user_role", "") ?: ""
 
     Scaffold { padding ->
         Column(
@@ -25,6 +26,15 @@ fun MenuScreen(navController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Witaj!", style = MaterialTheme.typography.headlineMedium)
+
+            if (userRole == "ADMIN") {
+                Button(
+                    onClick = { navController.navigate("admin") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Panel administracyjny")
+                }
+            }
 
             Button(
                 onClick = { navController.navigate("available_courses") },
@@ -42,12 +52,11 @@ fun MenuScreen(navController: NavHostController) {
 
             Button(
                 onClick = {
-                    // 1. Usuń token z SharedPreferences
                     context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                         .edit()
                         .remove("jwt_token")
+                        .remove("user_role")
                         .apply()
-                    // 2. Wróć do ekranu logowania i wyczyść historię
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }

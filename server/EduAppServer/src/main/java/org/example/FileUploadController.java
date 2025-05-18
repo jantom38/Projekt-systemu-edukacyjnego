@@ -37,7 +37,7 @@ public class FileUploadController {
 
 
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> uploadFile(
             @PathVariable Long courseId,
             @RequestParam("file") MultipartFile file) {

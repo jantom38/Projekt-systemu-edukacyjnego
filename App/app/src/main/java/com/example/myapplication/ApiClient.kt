@@ -20,7 +20,7 @@ data class UserCourseInfo(
     val id: Long,
     val username: String,
     val role: String,
-    val joinedAt: String
+    val joinedAt: String? = null
 )
 
 data class QuizAnswerDTO(
@@ -110,6 +110,10 @@ data class GenericResponse(
     val success: Boolean,
     val message: String
 )
+data class UsersResponse(
+    val success: Boolean,
+    val users: List<UserCourseInfo>
+)
 
 interface CourseApiService {
     @POST("/api/auth/login")
@@ -193,7 +197,7 @@ interface CourseApiService {
         @Body answers: List<QuizAnswerDTO>
     ): Response<SubmissionResultDTO>
 
-    @GET ("/api/courses/quizzes/{quizId}/results")
+    @GET("/api/courses/quizzes/{quizId}/results")
     suspend fun getQuizResult(@Path("quizId") quizId: Long): Response<QuizResult>
 
     @GET("/api/courses/{courseId}/quiz-stats")
@@ -201,6 +205,15 @@ interface CourseApiService {
 
     @GET("/api/courses/quizzes/{quizId}/detailed-results")
     suspend fun getQuizDetailedResults(@Path("quizId") quizId: Long): Response<QuizDetailedResultsResponse>
+
+    @GET("/api/courses/users")
+    suspend fun getAllUsers(): UsersResponse
+
+    @POST("/api/courses/users/{userId}/promote-to-teacher")
+    suspend fun promoteToTeacher(@Path("userId") userId: Long): Response<GenericResponse>
+
+    @POST("/api/courses/users/{userId}/demote-to-student")
+    suspend fun demoteToStudent(@Path("userId") userId: Long): Response<GenericResponse>
 }
 
 object RetrofitClient {
