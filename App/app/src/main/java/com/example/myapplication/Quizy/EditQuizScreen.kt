@@ -49,7 +49,7 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
             _isLoading.value = true
             _error.value = null
             try {
-                val response = apiService.getQuiz(quizId)
+                val response = apiService.getQuizForEdit(quizId)
                 if (response.isSuccessful && response.body()?.success == true) {
                     _quiz.value = response.body()?.quiz
                     Log.d("EditQuizViewModel", "Loaded quiz: ${_quiz.value}")

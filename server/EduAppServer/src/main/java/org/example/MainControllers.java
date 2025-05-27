@@ -871,7 +871,35 @@ public class MainControllers {
                             .body(Map.of("success", false, "message", "Pytanie nie znaleziono"));
                 });
     }
-
+    // Nowy endpoint dla edycji quizu
+    @GetMapping("/quizzes/{quizId}/edit")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+    public ResponseEntity<?> getQuizForEdit(@PathVariable Long quizId) {
+        log.info("Próba pobrania quizu ID: {} do edycji przez użytkownika {}", quizId, currentUsername());
+        return quizRepository.findById(quizId)
+                .map(quiz -> {
+                    Course course = quiz.getCourse();
+                    if (isTeacher(SecurityContextHolder.getContext().getAuthentication()) &&
+                            !course.getTeacher().getUsername().equals(currentUsername())) {
+                        log.warn("Nauczyciel {} próbował pobrać quiz ID: {} bez uprawnień", currentUsername(), quizId);
+                        return ResponseEntity.status(403)
+                                .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
+                    }
+                    // Pobierz wszystkie pytania quizu
+                    List<QuizQuestion> allQuestions = quizQuestionRepository.findByQuizId(quizId);
+                    quiz.setQuestions(allQuestions);
+                    log.info("Quiz ID: {} z wszystkimi pytaniami pobrany pomyślnie", quizId);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "quiz", quiz
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.error("Quiz ID: {} nie znaleziony", quizId);
+                    return ResponseEntity.status(404)
+                            .body(Map.of("success", false, "message", "Quiz nie znaleziony"));
+                });
+    }
     @GetMapping("/{courseId}/quiz-stats")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> getCourseQuizStats(@PathVariable Long courseId) {

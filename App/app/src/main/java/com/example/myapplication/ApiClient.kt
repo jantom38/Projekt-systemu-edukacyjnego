@@ -202,7 +202,8 @@ interface CourseApiService {
         @Path("id") courseId: Long,
         @Body quiz: Quiz
     ): Response<QuizResponse>
-
+    @GET("/api/courses/quizzes/{quizId}/edit")
+    suspend fun getQuizForEdit(@Path("quizId") quizId: Long): Response<QuizResponse>
     @PUT("/api/courses/quizzes/{quizId}")
     suspend fun updateQuiz(
         @Path("quizId") quizId: Long,
