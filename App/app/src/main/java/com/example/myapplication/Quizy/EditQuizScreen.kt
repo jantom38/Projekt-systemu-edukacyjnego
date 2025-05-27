@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,7 +43,6 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
     }
 
     fun loadQuiz() {
-
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -52,10 +50,10 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
                 val response = apiService.getQuizForEdit(quizId)
                 if (response.isSuccessful && response.body()?.success == true) {
                     _quiz.value = response.body()?.quiz
-                    Log.d("EditQuizViewModel", "Loaded quiz: ${_quiz.value}")
+                    Log.d("EditQuizViewModel", "Załadowano quiz: ${_quiz.value}")
                 } else {
                     _error.value = response.body()?.message ?: "Błąd ładowania quizu"
-                    Log.e("EditQuizViewModel", "Failed to load quiz: success=false")
+                    Log.e("EditQuizViewModel", "Nie udało się załadować quizu: success=false")
                 }
             } catch (e: HttpException) {
                 _error.value = when (e.code()) {
@@ -64,10 +62,10 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
                     404 -> "Quiz nie znaleziony"
                     else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("EditQuizViewModel", "HTTP error", e)
+                Log.e("EditQuizViewModel", "Błąd HTTP", e)
             } catch (e: Exception) {
                 _error.value = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("EditQuizViewModel", "Network error", e)
+                Log.e("EditQuizViewModel", "Błąd sieciowy", e)
             } finally {
                 _isLoading.value = false
             }
@@ -77,15 +75,15 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
     fun updateQuiz(quiz: Quiz, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                Log.d("EditQuizViewModel", "Updating quiz ID: $quizId")
+                Log.d("EditQuizViewModel", "Aktualizacja quizu ID: $quizId")
                 val response = apiService.updateQuiz(quizId, quiz)
                 if (response.isSuccessful && response.body()?.success == true) {
                     _quiz.value = response.body()?.quiz
-                    Log.d("EditQuizViewModel", "Quiz ID: $quizId updated successfully")
+                    Log.d("EditQuizViewModel", "Quiz ID: $quizId zaktualizowano pomyślnie")
                     onSuccess()
                 } else {
                     val errorMessage = response.body()?.message ?: "Błąd serwera: ${response.code()}"
-                    Log.e("EditQuizViewModel", "Failed to update quiz: $errorMessage")
+                    Log.e("EditQuizViewModel", "Nie udało się zaktualizować quizu: $errorMessage")
                     onError(errorMessage)
                 }
             } catch (e: HttpException) {
@@ -95,11 +93,11 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
                     404 -> "Quiz nie znaleziony"
                     else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("EditQuizViewModel", "HTTP error updating quiz ID: $quizId", e)
+                Log.e("EditQuizViewModel", "Błąd HTTP podczas aktualizacji quizu ID: $quizId", e)
                 onError(errorMessage)
             } catch (e: Exception) {
                 val errorMessage = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("EditQuizViewModel", "Network error updating quiz ID: $quizId", e)
+                Log.e("EditQuizViewModel", "Błąd sieciowy podczas aktualizacji quizu ID: $quizId", e)
                 onError(errorMessage)
             }
         }
@@ -108,29 +106,29 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
     fun deleteQuestion(questionId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                Log.d("EditQuizViewModel", "Deleting question ID: $questionId")
+                Log.d("EditQuizViewModel", "Usuwanie pytania ID: $questionId")
                 val response = apiService.deleteQuizQuestion(quizId, questionId)
                 if (response.isSuccessful && response.body()?.success == true) {
-                    Log.d("EditQuizViewModel", "Question ID: $questionId deleted successfully")
+                    Log.d("EditQuizViewModel", "Pytanie ID: $questionId usunięto pomyślnie")
                     onSuccess()
-                    loadQuiz() // Refresh quiz data
+                    loadQuiz() // Odświeżyć dane quizu
                 } else {
                     val errorMessage = response.body()?.message ?: "Błąd serwera: ${response.code()}"
-                    Log.e("EditQuizViewModel", "Failed to delete question ID: $questionId, code: ${response.code()}, message: $errorMessage")
+                    Log.e("EditQuizViewModel", "Nie udało się usunąć pytania ID: $questionId, kod: ${response.code()}")
                     onError(errorMessage)
                 }
             } catch (e: HttpException) {
                 val errorMessage = when (e.code()) {
                     401 -> "Brak autoryzacji"
                     403 -> "Brak uprawnień do usunięcia pytania"
-                    404 -> "Pytanie nie znalezione"
+                    404 -> "Pytanie nie znaleziono"
                     else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("EditQuizViewModel", "HTTP error deleting question ID: $questionId", e)
+                Log.e("EditQuizViewModel", "Błąd HTTP podczas usuwania pytania ID: $questionId", e)
                 onError(errorMessage)
             } catch (e: Exception) {
                 val errorMessage = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("EditQuizViewModel", "Network error deleting question ID: $questionId", e)
+                Log.e("EditQuizViewModel", "Błąd sieciowy podczas usuwania pytania ID: $questionId", e)
                 onError(errorMessage)
             }
         }
@@ -306,7 +304,7 @@ fun EditQuizScreen(navController: NavHostController, quizId: Long) {
                                         onClick = {
                                             question.id?.let { id ->
                                                 viewModel.deleteQuestion(
-                                                    questionId = id,
+                                                    id,
                                                     onSuccess = {
                                                         coroutineScope.launch {
                                                             snackbarHostState.showSnackbar("Pytanie usunięte pomyślnie")

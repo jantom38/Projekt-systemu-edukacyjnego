@@ -871,35 +871,62 @@ public class MainControllers {
                             .body(Map.of("success", false, "message", "Pytanie nie znaleziono"));
                 });
     }
-    // Nowy endpoint dla edycji quizu
+
+    // ZEDYTOWANY ENDPOINT getQuizForEdit - na wzór getQuizForSolving
     @GetMapping("/quizzes/{quizId}/edit")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> getQuizForEdit(@PathVariable Long quizId) {
-        log.info("Próba pobrania quizu ID: {} do edycji przez użytkownika {}", quizId, currentUsername());
-        return quizRepository.findById(quizId)
-                .map(quiz -> {
-                    Course course = quiz.getCourse();
-                    if (isTeacher(SecurityContextHolder.getContext().getAuthentication()) &&
-                            !course.getTeacher().getUsername().equals(currentUsername())) {
-                        log.warn("Nauczyciel {} próbował pobrać quiz ID: {} bez uprawnień", currentUsername(), quizId);
-                        return ResponseEntity.status(403)
-                                .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
-                    }
-                    // Pobierz wszystkie pytania quizu
-                    List<QuizQuestion> allQuestions = quizQuestionRepository.findByQuizId(quizId);
-                    quiz.setQuestions(allQuestions);
-                    log.info("Quiz ID: {} z wszystkimi pytaniami pobrany pomyślnie", quizId);
-                    return ResponseEntity.ok(Map.of(
-                            "success", true,
-                            "quiz", quiz
-                    ));
-                })
-                .orElseGet(() -> {
-                    log.error("Quiz ID: {} nie znaleziony", quizId);
-                    return ResponseEntity.status(404)
-                            .body(Map.of("success", false, "message", "Quiz nie znaleziony"));
-                });
+        String username = currentUsername();
+        log.info("Próba pobrania quizu ID: {} do edycji przez użytkownika {}", quizId, username);
+
+        Optional<Quiz> quizOptional = quizRepository.findById(quizId);
+
+        if (quizOptional.isEmpty()) {
+            log.error("Quiz ID: {} nie znaleziony", quizId);
+            return ResponseEntity.status(404)
+                    .body(Map.of("success", false, "message", "Quiz nie znaleziony"));
+        }
+
+        Quiz quiz = quizOptional.get();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        // Sprawdzenie autoryzacji dla nauczyciela
+        if (isTeacher(auth)) {
+            Course course = quiz.getCourse();
+            // Jeśli quiz nie ma kursu LUB kurs nie ma nauczyciela LUB nazwa nauczyciela kursu nie pasuje do aktualnego użytkownika
+            if (course == null || course.getTeacher() == null || !course.getTeacher().getUsername().equals(username)) {
+                log.warn("Nauczyciel {} próbował pobrać quiz ID: {} bez uprawnień (quiz nie należy do jego kursu)", username, quizId);
+                return ResponseEntity.status(403)
+                        .body(Map.of("success", false, "message", "Brak dostępu do edycji tego quizu. Quiz nie należy do Twojego kursu."));
+            }
+        }
+        // Jeśli użytkownik jest ADMINEM, ma dostęp automatycznie dzięki @PreAuthorize
+
+        // Pobierz wszystkie pytania quizu i przekształć je na List<Map<String, Object>>
+        List<QuizQuestion> allQuestions = quizQuestionRepository.findByQuizId(quizId);
+        List<Map<String, Object>> questionMaps = allQuestions.stream()
+                .map(q -> Map.of( // Tworzymy mapę dla każdego pytania
+                        "questionId", q.getId(),
+                        "questionText", q.getQuestionText(),
+                        "questionType", q.getQuestionType(),
+                        "options", q.getOptions() != null ? q.getOptions() : Map.of(), // Zwróć mapę opcji, jeśli istnieje, inaczej pustą mapę
+                        "correctAnswer", q.getCorrectAnswer() != null ? q.getCorrectAnswer() : "" // Zwróć poprawną odpowiedź
+                ))
+                .collect(Collectors.toList());
+
+        log.info("Quiz ID: {} z wszystkimi pytaniami pobrany pomyślnie do edycji dla {}", quizId, username);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "quiz", Map.of( // Tworzymy mapę dla quizu, jak w getQuizForSolving
+                        "id", quiz.getId(),
+                        "title", quiz.getTitle(),
+                        "description", quiz.getDescription(),
+                        "numberOfQuestionsToDisplay", quiz.getNumberOfQuestionsToDisplay(), // Dodaj to pole, jeśli chcesz je edytować
+                        "questions", questionMaps // Zwracamy listę map pytań
+                )
+        ));
     }
+
     @GetMapping("/{courseId}/quiz-stats")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> getCourseQuizStats(@PathVariable Long courseId) {

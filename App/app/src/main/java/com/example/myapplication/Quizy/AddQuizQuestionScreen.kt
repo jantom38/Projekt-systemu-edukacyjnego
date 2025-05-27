@@ -73,7 +73,8 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
     var questionType by remember { mutableStateOf("multiple_choice") }
     var correctAnswer by remember { mutableStateOf("") }
     var options by remember { mutableStateOf(mapOf<String, String>("A" to "", "B" to "")) }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) } // For question type dropdown
+    var tfExpanded by remember { mutableStateOf(false) } // For True/False dropdown
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -135,8 +136,8 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                         text = { Text("Prawda/Fałsz") },
                         onClick = {
                             questionType = "true_false"
-                            options = mapOf("True" to "Prawda", "False" to "Fałsz")
-                            correctAnswer = ""
+                            options = mapOf("True" to "Prawda", "False" to "Fałsz") // Set predefined options for True/False
+                            correctAnswer = "" // Clear previous correct answer
                             expanded = false
                         }
                     )
@@ -174,7 +175,10 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                             IconButton(
                                 onClick = {
                                     options = options.toMutableMap().apply { remove(key) }
-                                }
+                                    // Remove from correctAnswer if it was selected
+                                    correctAnswer = correctAnswer.split(",").filter { it != key }.joinToString(",")
+                                },
+                                enabled = options.size > 2 // Minimum 2 options
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = "Usuń opcję")
                             }
@@ -186,7 +190,8 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                                 val newKey = ('A' + options.size).toString()
                                 options = options.toMutableMap().apply { put(newKey, "") }
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = options.size < 10 // Max 10 options
                         ) {
                             Text("Dodaj opcję")
                         }
@@ -200,13 +205,46 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (questionType == "true_false") {
-                OutlinedTextField(
-                    value = correctAnswer,
-                    onValueChange = { correctAnswer = it },
-                    label = { Text("Poprawna odpowiedź (True lub False)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } else {
+                // True/False Dropdown menu for correct answer
+                ExposedDropdownMenuBox(
+                    expanded = tfExpanded,
+                    onExpandedChange = { tfExpanded = !tfExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = when (correctAnswer) {
+                            "True" -> "Prawda"
+                            "False" -> "Fałsz"
+                            else -> ""
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Poprawna odpowiedź") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tfExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = tfExpanded,
+                        onDismissRequest = { tfExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Prawda") },
+                            onClick = {
+                                correctAnswer = "True"
+                                tfExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Fałsz") },
+                            onClick = {
+                                correctAnswer = "False"
+                                tfExpanded = false
+                            }
+                        )
+                    }
+                }
+            } else { // open_ended
                 OutlinedTextField(
                     value = correctAnswer,
                     onValueChange = { correctAnswer = it },
@@ -252,7 +290,7 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                     } else if (questionType == "true_false") {
                         if (correctAnswer !in setOf("True", "False")) {
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar("Poprawna odpowiedź musi być 'True' lub 'False'")
+                                snackbarHostState.showSnackbar("Poprawna odpowiedź musi być 'Prawda' lub 'Fałsz'")
                             }
                             return@Button
                         }
@@ -268,7 +306,7 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                         QuizQuestion(
                             questionText = questionText,
                             questionType = questionType,
-                            options = if (questionType != "open_ended") options else null,
+                            options = if (questionType in listOf("multiple_choice", "true_false")) options else null, // Ensure options are passed for true_false
                             correctAnswer = correctAnswer,
                             quizId = quizId
                         ),

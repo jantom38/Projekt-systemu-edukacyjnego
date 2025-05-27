@@ -72,6 +72,8 @@ data class SubmissionResultDTO(
     val percentage: Double
 )
 
+
+
 data class QuizListResponse(val success: Boolean, val quizzes: List<Quiz>)
 
 data class QuizResponse(
@@ -261,7 +263,7 @@ interface CourseApiService {
 }
 
 object RetrofitClient {
-    private const val BASE_URL = "http://192.168.160.18:8080/"
+    private const val BASE_URL = "http://10.0.2.2:8080/"
 
     fun getInstance(context: Context): CourseApiService {
         val okHttpClient = OkHttpClient.Builder()
