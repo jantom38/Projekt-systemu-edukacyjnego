@@ -3,6 +3,7 @@ package com.example.myapplication.Quizy
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.Quiz
@@ -28,6 +30,8 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    // New state for the number of questions to display
+    var numberOfQuestionsToDisplay by remember { mutableStateOf("1") } // Default to 1
 
     // Model danych dla pytania w trakcie edycji
     data class QuizQuestionInput(
@@ -148,6 +152,19 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Opis quizu") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            item {
+                OutlinedTextField(
+                    value = numberOfQuestionsToDisplay,
+                    onValueChange = { newValue ->
+                        if (newValue.all { it.isDigit() }) {
+                            numberOfQuestionsToDisplay = newValue
+                        }
+                    },
+                    label = { Text("Liczba pytań do wyświetlenia (losowo)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), // Corrected KeyboardOptions usage
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -298,12 +315,23 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                             }
                             return@Button
                         }
+                        // Validate numberOfQuestionsToDisplay
+                        val numQuestions = numberOfQuestionsToDisplay.toIntOrNull()
+                        if (numQuestions == null || numQuestions <= 0) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Liczba pytań do wyświetlenia musi być liczbą całkowitą większą od 0")
+                            }
+                            return@Button
+                        }
+
                         coroutineScope.launch {
                             try {
                                 val api = RetrofitClient.getInstance(context)
                                 val quiz = Quiz(
                                     title = title,
-                                    description = description.takeIf { it.isNotBlank() })
+                                    description = description.takeIf { it.isNotBlank() },
+                                    numberOfQuestionsToDisplay = numQuestions // Pass the new field
+                                )
                                 Log.d("AddQuiz", "Wysyłanie quizu: $quiz dla kursu ID: $courseId")
                                 val quizResponse = api.createQuiz(courseId, quiz)
                                 Log.d("AddQuiz", "Odpowiedź serwera dla quizu: ${quizResponse.code()}, body: ${quizResponse.body()}")

@@ -303,6 +303,12 @@ public class MainControllers {
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Tytuł quizu jest wymagany"));
         }
+        // Validate numberOfQuestionsToDisplay
+        if (quiz.getNumberOfQuestionsToDisplay() <= 0) {
+            log.warn("Próba dodania quizu z nieprawidłową ilością pytań do wyświetlenia: {}", quiz.getNumberOfQuestionsToDisplay());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Ilość pytań do wyświetlenia musi być większa niż 0"));
+        }
 
         return courseRepository.findById(id)
                 .map(course -> {
@@ -536,7 +542,11 @@ public class MainControllers {
 
         return quizRepository.findById(quizId)
                 .map(quiz -> {
-                    List<QuizQuestionDTO> questions = quizQuestionRepository.findByQuizId(quizId).stream()
+                    List<QuizQuestion> allQuestions = quizQuestionRepository.findByQuizId(quizId);
+                    Collections.shuffle(allQuestions); // Shuffle all questions
+                    int questionsToDisplay = Math.min(quiz.getNumberOfQuestionsToDisplay(), allQuestions.size()); // Get the minimum of requested and available questions
+                    List<QuizQuestionDTO> selectedQuestions = allQuestions.stream()
+                            .limit(questionsToDisplay) // Limit to the desired number of questions
                             .map(q -> new QuizQuestionDTO(
                                     q.getId(),
                                     q.getQuestionText(),
@@ -545,15 +555,14 @@ public class MainControllers {
                             ))
                             .collect(Collectors.toList());
 
-                    log.info("Pobrano quiz {} z {} pytaniami", quizId, questions.size());
+                    log.info("Pobrano quiz {} z {} (wybrano {}) pytaniami", quizId, allQuestions.size(), selectedQuestions.size());
                     return ResponseEntity.ok(Map.of(
                             "success", true,
                             "quiz", Map.of(
                                     "id", quiz.getId(),
-
                                     "title", quiz.getTitle(),
                                     "description", quiz.getDescription(),
-                                    "questions", questions
+                                    "questions", selectedQuestions // Return the selected questions
                             )
                     ));
                 })

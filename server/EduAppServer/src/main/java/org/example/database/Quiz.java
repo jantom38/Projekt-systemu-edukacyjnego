@@ -27,6 +27,9 @@ public class Quiz {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // New field for the number of questions to display
+    @Column(nullable = false)
+    private int numberOfQuestionsToDisplay;
 
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<QuizQuestion> questions = new ArrayList<>();
@@ -36,10 +39,11 @@ public class Quiz {
     // Constructors
     public Quiz() {}
 
-    public Quiz(String title, String description, Course course) {
+    public Quiz(String title, String description, Course course, int numberOfQuestionsToDisplay) {
         this.title = title;
         this.description = description;
         this.course = course;
+        this.numberOfQuestionsToDisplay = numberOfQuestionsToDisplay;
     }
 
     // Getters and Setters
@@ -58,5 +62,14 @@ public class Quiz {
 
     public void setQuestions(List<QuizQuestion> questions) {
         this.questions = questions;
+    }
+
+    // New getter and setter for numberOfQuestionsToDisplay
+    public int getNumberOfQuestionsToDisplay() {
+        return numberOfQuestionsToDisplay;
+    }
+
+    public void setNumberOfQuestionsToDisplay(int numberOfQuestionsToDisplay) {
+        this.numberOfQuestionsToDisplay = numberOfQuestionsToDisplay;
     }
 }
