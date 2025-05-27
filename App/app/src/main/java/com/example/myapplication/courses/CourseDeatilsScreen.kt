@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -111,11 +112,8 @@ class CourseDetailsViewModel(context: Context, private val courseId: Long) : Vie
             }
         }
     }
-
 }
-//
-// EKRAN TEACHER DOTYCZĄCY OBSŁUGI PLIKÓW I QUIZOW 
-//
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
@@ -265,8 +263,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
-                                        .clickable { quiz.id?.let { navController.navigate("quiz_results/$it") } },
+                                        .padding(vertical = 8.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                                 ) {
                                     Row(
@@ -276,7 +273,11 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column {
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { quiz.id?.let { navController.navigate("quiz_results/$it") } }
+                                        ) {
                                             Text(
                                                 text = quiz.title,
                                                 style = MaterialTheme.typography.titleMedium
@@ -289,31 +290,47 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                                                 )
                                             }
                                         }
-                                        IconButton(
-                                            onClick = {
-                                                quiz.id?.let { quizId ->
-                                                    viewModel.deleteQuiz(
-                                                        quizId = quizId,
-                                                        onSuccess = {
-                                                            coroutineScope.launch {
-                                                                snackbarHostState.showSnackbar("Quiz usunięty pomyślnie")
+                                        Row {
+                                            IconButton(
+                                                onClick = {
+                                                    quiz.id?.let { id ->
+                                                        navController.navigate("edit_quiz/$id")
+                                                    }
+                                                },
+                                                enabled = quiz.id != null
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Edit,
+                                                    contentDescription = "Edytuj quiz",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    quiz.id?.let { quizId ->
+                                                        viewModel.deleteQuiz(
+                                                            quizId = quizId,
+                                                            onSuccess = {
+                                                                coroutineScope.launch {
+                                                                    snackbarHostState.showSnackbar("Quiz usunięty pomyślnie")
+                                                                }
+                                                            },
+                                                            onError = { error ->
+                                                                coroutineScope.launch {
+                                                                    snackbarHostState.showSnackbar(error)
+                                                                }
                                                             }
-                                                        },
-                                                        onError = { error ->
-                                                            coroutineScope.launch {
-                                                                snackbarHostState.showSnackbar(error)
-                                                            }
-                                                        }
-                                                    )
-                                                }
-                                            },
-                                            enabled = quiz.id != null
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = "Usuń quiz",
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
+                                                        )
+                                                    }
+                                                },
+                                                enabled = quiz.id != null
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = "Usuń quiz",
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
                                         }
                                     }
                                 }

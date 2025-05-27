@@ -690,6 +690,187 @@ public class MainControllers {
 
         return ResponseEntity.ok(response);
     }
+    @PutMapping("/quizzes/{quizId}")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+    public ResponseEntity<?> updateQuiz(@PathVariable Long quizId, @RequestBody Quiz quiz) {
+        log.info("Próba edycji quizu ID: {} przez użytkownika {}", quizId, currentUsername());
+        if (quiz.getTitle() == null || quiz.getTitle().isBlank()) {
+            log.warn("Próba edycji quizu ID: {} z pustym tytułem", quizId);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Tytuł quizu jest wymagany"));
+        }
+        if (quiz.getNumberOfQuestionsToDisplay() <= 0) {
+            log.warn("Próba edycji quizu ID: {} z nieprawidłową ilością pytań do wyświetlenia: {}", quizId, quiz.getNumberOfQuestionsToDisplay());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Ilość pytań do wyświetlenia musi być większa niż 0"));
+        }
+
+        return quizRepository.findById(quizId)
+                .map(existingQuiz -> {
+                    Course course = existingQuiz.getCourse();
+                    if (isTeacher(SecurityContextHolder.getContext().getAuthentication()) &&
+                            !course.getTeacher().getUsername().equals(currentUsername())) {
+                        log.warn("Nauczyciel {} próbował edytować quiz ID: {} bez uprawnień", currentUsername(), quizId);
+                        return ResponseEntity.status(403)
+                                .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
+                    }
+                    existingQuiz.setTitle(quiz.getTitle());
+                    existingQuiz.setDescription(quiz.getDescription());
+                    existingQuiz.setNumberOfQuestionsToDisplay(quiz.getNumberOfQuestionsToDisplay());
+                    Quiz updatedQuiz = quizRepository.save(existingQuiz);
+                    log.info("Quiz ID: {} edytowany pomyślnie", quizId);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "Quiz zaktualizowany pomyślnie",
+                            "quiz", updatedQuiz
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.error("Quiz ID: {} nie znaleziony", quizId);
+                    return ResponseEntity.status(404)
+                            .body(Map.of("success", false, "message", "Quiz nie znaleziony"));
+                });
+    }
+
+    @PutMapping("/quizzes/{quizId}/questions/{questionId}")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+    public ResponseEntity<?> updateQuizQuestion(@PathVariable Long quizId, @PathVariable Long questionId, @RequestBody QuizQuestion question) {
+        log.info("Próba edycji pytania ID: {} w quizie ID: {} przez użytkownika {}", questionId, quizId, currentUsername());
+        if (question.getQuestionText() == null || question.getQuestionText().isBlank()) {
+            log.warn("Próba edycji pytania ID: {} z pustą treścią", questionId);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Treść pytania jest wymagana"));
+        }
+        if (question.getQuestionType() == null ||
+                (!question.getQuestionType().equals("multiple_choice") &&
+                        !question.getQuestionType().equals("open_ended") &&
+                        !question.getQuestionType().equals("true_false"))) {
+            log.warn("Nieprawidłowy typ pytania: {}", question.getQuestionType());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Typ pytania musi być 'multiple_choice', 'open_ended' lub 'true_false'"));
+        }
+        if (question.getQuestionType().equals("multiple_choice")) {
+            if (question.getOptions() == null || question.getOptions().size() < 2) {
+                log.warn("Za mało opcji dla pytania wielokrotnego wyboru ID: {}", questionId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Pytania wielokrotnego wyboru wymagają co najmniej 2 opcji"));
+            }
+            if (question.getCorrectAnswer() == null || question.getCorrectAnswer().isBlank()) {
+                log.warn("Brak poprawnej odpowiedzi dla pytania wielokrotnego wyboru ID: {}", questionId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Co najmniej jedna poprawna odpowiedź jest wymagana"));
+            }
+            List<String> correctAnswers = Arrays.asList(question.getCorrectAnswer().split(","));
+            for (String correct : correctAnswers) {
+                if (!question.getOptions().containsKey(correct)) {
+                    log.warn("Nieprawidłowa poprawna odpowiedź '{}' dla pytania ID: {}", correct, questionId);
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("success", false, "message", "Wszystkie poprawne odpowiedzi muszą być kluczami opcji"));
+                }
+            }
+        } else if (question.getQuestionType().equals("true_false")) {
+            if (question.getOptions() == null ||
+                    !question.getOptions().entrySet().equals(
+                            Set.of(
+                                    Map.entry("True", "Prawda"),
+                                    Map.entry("False", "Fałsz")
+                            )
+                    )) {
+                log.warn("Nieprawidłowe opcje dla pytania prawda/fałsz ID: {}", questionId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Opcje dla pytania prawda/fałsz muszą być dokładnie 'True: Prawda' i 'False: Fałsz'"));
+            }
+            if (question.getCorrectAnswer() == null || question.getCorrectAnswer().isBlank()) {
+                log.warn("Brak poprawnej odpowiedzi dla pytania prawda/fałsz ID: {}", questionId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Co najmniej jedna poprawna odpowiedź jest wymagana"));
+            }
+            List<String> correctAnswers = Arrays.asList(question.getCorrectAnswer().split(","));
+            for (String correct : correctAnswers) {
+                if (!Set.of("True", "False").contains(correct)) {
+                    log.warn("Nieprawidłowa poprawna odpowiedź '{}' dla pytania prawda/fałsz ID: {}", correct, questionId);
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("success", false, "message", "Poprawne odpowiedzi muszą być 'True' lub 'False'"));
+                }
+            }
+        } else if (question.getQuestionType().equals("open_ended")) {
+            if (question.getCorrectAnswer() == null || question.getCorrectAnswer().isBlank()) {
+                log.warn("Brak poprawnej odpowiedzi dla pytania otwartego ID: {}", questionId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Poprawna odpowiedź jest wymagana dla pytań otwartych"));
+            }
+            if (question.getOptions() != null && !question.getOptions().isEmpty()) {
+                log.warn("Opcje nie są dozwolone dla pytania otwartego ID: {}", questionId);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Pytania otwarte nie mogą zawierać opcji"));
+            }
+        }
+
+        return quizQuestionRepository.findById(questionId)
+                .map(existingQuestion -> {
+                    if (!existingQuestion.getQuiz().getId().equals(quizId)) {
+                        log.warn("Pytanie ID: {} nie należy do quizu ID: {}", questionId, quizId);
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("success", false, "message", "Pytanie nie należy do tego quizu"));
+                    }
+                    Course course = existingQuestion.getQuiz().getCourse();
+                    if (isTeacher(SecurityContextHolder.getContext().getAuthentication()) &&
+                            !course.getTeacher().getUsername().equals(currentUsername())) {
+                        log.warn("Nauczyciel {} próbował edytować pytanie ID: {} bez uprawnień", currentUsername(), questionId);
+                        return ResponseEntity.status(403)
+                                .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
+                    }
+                    existingQuestion.setQuestionText(question.getQuestionText());
+                    existingQuestion.setQuestionType(question.getQuestionType());
+                    existingQuestion.setOptions(question.getOptions());
+                    existingQuestion.setCorrectAnswer(question.getCorrectAnswer());
+                    QuizQuestion updatedQuestion = quizQuestionRepository.save(existingQuestion);
+                    log.info("Pytanie ID: {} w quizie ID: {} zaktualizowane pomyślnie", questionId, quizId);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "Pytanie zaktualizowane pomyślnie",
+                            "question", updatedQuestion
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.error("Pytanie ID: {} nie znaleziony", questionId);
+                    return ResponseEntity.status(404)
+                            .body(Map.of("success", false, "message", "Pytanie nie znalezione"));
+                });
+    }
+
+    @DeleteMapping("/quizzes/{quizId}/questions/{questionId}")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+    @Transactional
+    public ResponseEntity<?> deleteQuizQuestion(@PathVariable Long quizId, @PathVariable Long questionId) {
+        log.info("Próba usunięcia pytania ID: {} z quizu ID: {} przez użytkownika {}", questionId, quizId, currentUsername());
+        return quizQuestionRepository.findById(questionId)
+                .map(question -> {
+                    if (!question.getQuiz().getId().equals(quizId)) {
+                        log.warn("Pytanie ID: {} nie należy do quizu ID: {}", questionId, quizId);
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("success", false, "message", "Pytanie nie należy do tego quizu"));
+                    }
+                    Course course = question.getQuiz().getCourse();
+                    if (isTeacher(SecurityContextHolder.getContext().getAuthentication()) &&
+                            !course.getTeacher().getUsername().equals(currentUsername())) {
+                        log.warn("Nauczyciel {} próbował usunąć pytanie ID: {} bez uprawnień", currentUsername(), questionId);
+                        return ResponseEntity.status(403)
+                                .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
+                    }
+                    quizQuestionRepository.delete(question);
+                    log.info("Pytanie ID: {} usunięte pomyślnie", questionId);
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "Pytanie usunięte pomyślnie"
+                    ));
+                })
+                .orElseGet(() -> {
+                    log.error("Pytanie ID: {} nie znaleziono", questionId);
+                    return ResponseEntity.status(404)
+                            .body(Map.of("success", false, "message", "Pytanie nie znaleziono"));
+                });
+    }
 
     @GetMapping("/{courseId}/quiz-stats")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")

@@ -9,7 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.example.myapplication.Quizy.AddQuizQuestionScreen
 import com.example.myapplication.Quizy.AddQuizScreen
+import com.example.myapplication.Quizy.EditQuizScreen
+import com.example.myapplication.Quizy.EditQuestionScreen
 import com.example.myapplication.Quizy.QuizResultScreen
 import com.example.myapplication.Quizy.SolveQuizScreen
 import com.example.myapplication.courses.AccessKeyScreen
@@ -95,6 +98,31 @@ fun EduApp() {
         ) { backStackEntry ->
             val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
             AddQuizScreen(navController, courseId)
+        }
+        composable(
+            "edit_quiz/{quizId}",
+            arguments = listOf(navArgument("quizId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val quizId = backStackEntry.arguments?.getLong("quizId") ?: return@composable
+            EditQuizScreen(navController, quizId)
+        }
+        composable(
+            "add_question/{quizId}",
+            arguments = listOf(navArgument("quizId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val quizId = backStackEntry.arguments?.getLong("quizId") ?: return@composable
+            AddQuizQuestionScreen(navController, quizId)
+        }
+        composable(
+            "edit_question/{quizId}/{questionId}",
+            arguments = listOf(
+                navArgument("quizId") { type = NavType.LongType },
+                navArgument("questionId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val quizId = backStackEntry.arguments?.getLong("quizId") ?: return@composable
+            val questionId = backStackEntry.arguments?.getLong("questionId") ?: return@composable
+            EditQuestionScreen(navController, quizId, questionId)
         }
         composable(
             "solve_quiz/{quizId}",

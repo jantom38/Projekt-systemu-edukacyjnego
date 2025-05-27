@@ -15,7 +15,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 
-// Modele danych
+// Existing data classes remain unchanged
 data class UserCourseInfo(
     val id: Long,
     val username: String,
@@ -27,6 +27,7 @@ data class QuizAnswerDTO(
     val questionId: Long,
     val answer: String
 )
+
 data class Quiz(
     val id: Long? = null,
     val title: String,
@@ -35,12 +36,14 @@ data class Quiz(
     val questions: List<QuizQuestion> = emptyList(),
     val numberOfQuestionsToDisplay: Int? = null
 )
+
 data class Quizsolve(
     val id: Long,
     val title: String,
     val description: String?,
     val questions: List<QuizQuestion>
 )
+
 data class QuizQuestion(
     @SerializedName("questionId")
     val id: Long? = null,
@@ -50,14 +53,17 @@ data class QuizQuestion(
     val correctAnswer: String,
     val quizId: Long? = null
 )
+
 data class QuizHistoryResponse(
     val success: Boolean,
     val results: List<QuizHistoryItem>
 )
+
 data class QuizHistoryItem(
     val date: String,
     val score: String
 )
+
 data class SubmissionResultDTO(
     val success: Boolean,
     val score: String,
@@ -65,24 +71,41 @@ data class SubmissionResultDTO(
     val totalQuestions: Int,
     val percentage: Double
 )
+
 data class QuizListResponse(val success: Boolean, val quizzes: List<Quiz>)
+
 data class QuizResponse(
     val success: Boolean,
-    val quiz: Quiz
+    val quiz: Quiz,
+    val message: String
 )
+
 data class QuestionResponse(val success: Boolean, val message: String, val question: QuizQuestion)
+
+data class GenericResponse(
+    val success: Boolean,
+    val message: String
+)
+
 data class LoginRequest(val username: String, val password: String)
+
 data class LoginResponse(val success: Boolean, val token: String?, val role: String?)
+
 data class RegisterRequest(val username: String, val password: String, val roleCode: String)
+
 data class RegisterResponse(val success: Boolean, val message: String)
+
 data class GenerateCodeRequest(val validity: String)
+
 data class GenerateCodeResponse(val success: Boolean, val code: String, val expiresAt: String, val message: String)
+
 data class QuizStat(
     val quizId: Long,
     val quizTitle: String,
     val attempts: Long,
     val averageScore: Double
 )
+
 data class QuizDetailedResult(
     val userId: Long,
     val username: String,
@@ -92,25 +115,25 @@ data class QuizDetailedResult(
     val completionDate: String,
     val answers: List<Map<String, Any>>
 )
+
 data class QuizStatsResponse(
     val success: Boolean,
     val courseId: Long,
     val stats: List<QuizStat>
 )
+
 data class QuizDetailedResultsResponse(
     val success: Boolean,
     val quizId: Long,
     val quizTitle: String,
     val results: List<QuizDetailedResult>
 )
+
 data class CourseUsersResponse(
     val success: Boolean,
     val users: List<UserCourseInfo>
 )
-data class GenericResponse(
-    val success: Boolean,
-    val message: String
-)
+
 data class UsersResponse(
     val success: Boolean,
     val users: List<UserCourseInfo>
@@ -180,14 +203,33 @@ interface CourseApiService {
         @Body quiz: Quiz
     ): Response<QuizResponse>
 
+    @PUT("/api/courses/quizzes/{quizId}")
+    suspend fun updateQuiz(
+        @Path("quizId") quizId: Long,
+        @Body quiz: Quiz
+    ): Response<QuizResponse>
+
     @POST("/api/courses/quizzes/{quizId}/questions")
     suspend fun createQuizQuestion(
         @Path("quizId") quizId: Long,
         @Body question: QuizQuestion
     ): Response<QuestionResponse>
 
+    @PUT("/api/courses/quizzes/{quizId}/questions/{questionId}")
+    suspend fun updateQuizQuestion(
+        @Path("quizId") quizId: Long,
+        @Path("questionId") questionId: Long,
+        @Body question: QuizQuestion
+    ): Response<QuestionResponse>
+
     @DELETE("/api/courses/quizzes/{quizId}")
-    suspend fun deleteQuiz(@Path("quizId") quizId: Long): Response<QuestionResponse>
+    suspend fun deleteQuiz(@Path("quizId") quizId: Long): Response<GenericResponse>
+
+    @DELETE("/api/courses/quizzes/{quizId}/questions/{questionId}")
+    suspend fun deleteQuizQuestion(
+        @Path("quizId") quizId: Long,
+        @Path("questionId") questionId: Long
+    ): Response<GenericResponse>
 
     @GET("/api/courses/quizzes/{quizId}")
     suspend fun getQuiz(@Path("quizId") quizId: Long): Response<QuizResponse>
