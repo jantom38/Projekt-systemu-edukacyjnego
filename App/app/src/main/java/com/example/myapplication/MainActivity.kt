@@ -15,6 +15,7 @@ import com.example.myapplication.Quizy.EditQuizScreen
 import com.example.myapplication.Quizy.EditQuestionScreen
 import com.example.myapplication.Quizy.QuizResultScreen
 import com.example.myapplication.Quizy.SolveQuizScreen
+import com.example.myapplication.admin.SystemUsersScreen
 import com.example.myapplication.courses.AccessKeyScreen
 import com.example.myapplication.courses.CourseDetailsScreen
 import com.example.myapplication.courses.CourseListScreen
@@ -49,7 +50,6 @@ fun EduApp() {
         composable("courses") { CourseListScreen(navController) }
         composable("user") { UserScreen(navController) }
         composable("teacher") { TeacherScreen(navController) }
-        composable("admin") { AdminScreen(navController) }
         composable("admin_teacher") { AdminTeacherScreen(navController) }
         composable("add_course") { AddCourseScreen(navController) }
         composable(
@@ -76,6 +76,7 @@ fun EduApp() {
                 navController.popBackStack("menu", false)
             }
         }
+        composable("system_users") { SystemUsersScreen(navController) }
         composable(
             "manage_users/{courseId}",
             arguments = listOf(navArgument("courseId") { type = NavType.LongType })
@@ -145,6 +146,7 @@ fun EduApp() {
             val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
             TeacherQuizStatsScreen(navController, courseId)
         }
+
         composable(
             "quiz_results/{quizId}",
             arguments = listOf(navArgument("quizId") { type = NavType.LongType })

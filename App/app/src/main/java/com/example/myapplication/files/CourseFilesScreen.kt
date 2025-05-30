@@ -378,7 +378,7 @@ fun fetchAndOpenFile(context: Context, fileUrl: String, fileName: String) {
 
 @Composable
 fun FileCard(file: CourseFile, context: Context) {
-    val baseUrl = "http://10.0.2.2:8080"
+    val baseUrl = "http://192.168.160.18:8080"
     val fullUrl = "$baseUrl${file.fileUrl}"
 
     Card(

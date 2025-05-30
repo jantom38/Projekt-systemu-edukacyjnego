@@ -25,10 +25,6 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import retrofit2.Response
 
-// Modele odpowiedzi API
-
-
-
 // ViewModel do zarządzania użytkownikami kursu
 class CourseUsersViewModel(
     context: Context,
@@ -52,9 +48,9 @@ class CourseUsersViewModel(
             isLoading = true
             error = null
             try {
-                val resp = api.getCourseUsers(courseId)
-                if (resp.success) {
-                    users = resp.users
+                val resp = api.getCourseUsers(courseId) //
+                if (resp.success) { //
+                    users = resp.users //
                 } else {
                     error = "Błąd serwera"
                 }
@@ -75,10 +71,10 @@ class CourseUsersViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val res: Response<GenericResponse> = api.removeUserFromCourse(courseId, userId)
-                if (res.isSuccessful && res.body()?.success == true) {
+                val res: Response<GenericResponse> = api.removeUserFromCourse(courseId, userId) //
+                if (res.isSuccessful && res.body()?.success == true) { //
                     onSuccess()
-                    loadUsers()
+                    loadUsers() // Ponownie ładuje użytkowników po pomyślnym usunięciu
                 } else {
                     onError(res.body()?.message ?: "Nie udało się usunąć użytkownika")
                 }
@@ -108,12 +104,16 @@ fun CourseUsersScreen(
     navController: NavHostController,
     courseId: Long
 ) {
-    val context = LocalContext.current
+    val context = LocalContext.current //
     val viewModel: CourseUsersViewModel = viewModel(
         factory = CourseUsersViewModel.Factory(context, courseId)
     )
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() } //
+    val scope = rememberCoroutineScope() //
+
+    // Stany do zarządzania oknem dialogowym potwierdzenia
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+    var userIdToRemove by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
         topBar = {
@@ -126,24 +126,25 @@ fun CourseUsersScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) } //
     ) { padding ->
-        Box(Modifier
-            .fillMaxSize()
-            .padding(padding)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
         ) {
             when {
-                viewModel.isLoading -> {
+                viewModel.isLoading -> { //
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 }
-                viewModel.error != null -> {
+                viewModel.error != null -> { //
                     Column(
                         Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(viewModel.error!!, color = MaterialTheme.colorScheme.error)
+                        Text(viewModel.error!!, color = MaterialTheme.colorScheme.error) //
                         Spacer(Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadUsers() }) {
+                        Button(onClick = { viewModel.loadUsers() }) { //
                             Text("Spróbuj ponownie")
                         }
                     }
@@ -153,7 +154,7 @@ fun CourseUsersScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(viewModel.users) { user ->
+                        items(viewModel.users) { user -> //
                             Card(Modifier.fillMaxWidth()) {
                                 Row(
                                     Modifier
@@ -163,20 +164,14 @@ fun CourseUsersScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        Text(user.username, style = MaterialTheme.typography.titleMedium)
-                                        Text("Rola: ${user.role}", style = MaterialTheme.typography.bodySmall)
-                                        Text("Dołączył: ${user.joinedAt}", style = MaterialTheme.typography.bodySmall)
+                                        Text(user.username, style = MaterialTheme.typography.titleMedium) //
+                                        Text("Rola: ${user.role}", style = MaterialTheme.typography.bodySmall) //
+                                        Text("Dołączył: ${user.joinedAt}", style = MaterialTheme.typography.bodySmall) //
                                     }
                                     IconButton(onClick = {
-                                        viewModel.removeUser(
-                                            user.id,
-                                            onSuccess = {
-                                                scope.launch { snackbarHostState.showSnackbar("Usunięto użytkownika") }
-                                            },
-                                            onError = { msg ->
-                                                scope.launch { snackbarHostState.showSnackbar(msg) }
-                                            }
-                                        )
+                                        // Ustaw ID użytkownika i pokaż dialog
+                                        userIdToRemove = user.id
+                                        showConfirmationDialog = true
                                     }) {
                                         Icon(
                                             Icons.Default.Delete,
@@ -189,6 +184,50 @@ fun CourseUsersScreen(
                         }
                     }
                 }
+            }
+
+            // Okno dialogowe potwierdzenia
+            if (showConfirmationDialog) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showConfirmationDialog = false
+                        userIdToRemove = null
+                    },
+                    title = { Text("Potwierdzenie usunięcia") },
+                    text = { Text("Czy na pewno chcesz usunąć tego użytkownika z kursu?") },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                userIdToRemove?.let { id ->
+                                    viewModel.removeUser( //
+                                        userId = id,
+                                        onSuccess = {
+                                            scope.launch { snackbarHostState.showSnackbar("Użytkownik został usunięty.") }
+                                            // viewModel.loadUsers() jest już wywoływane w onSuccess w ViewModelu
+                                        },
+                                        onError = { msg ->
+                                            scope.launch { snackbarHostState.showSnackbar("Błąd: $msg") }
+                                        }
+                                    )
+                                }
+                                showConfirmationDialog = false
+                                userIdToRemove = null
+                            }
+                        ) {
+                            Text("Tak, usuń")
+                        }
+                    },
+                    dismissButton = {
+                        Button(
+                            onClick = {
+                                showConfirmationDialog = false
+                                userIdToRemove = null
+                            }
+                        ) {
+                            Text("Anuluj")
+                        }
+                    }
+                )
             }
         }
     }

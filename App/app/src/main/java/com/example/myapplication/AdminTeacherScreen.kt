@@ -8,14 +8,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.myapplication.courses.Course
+import com.example.myapplication.admin.SystemUsersViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,6 +42,12 @@ fun AdminTeacherScreen(navController: NavHostController) {
     var isGenerating by remember { mutableStateOf(false) }
     var showUsers by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
+    var selectedUserIdForDeletion by remember { mutableStateOf<Long?>(null) }
+    var selectedUsernameForDeletion by remember { mutableStateOf<String?>(null) }
+
+    // Initialize ViewModel for user deletion
+    val viewModel: SystemUsersViewModel = viewModel(factory = SystemUsersViewModel.Factory(context))
 
     fun loadCourses() {
         scope.launch(Dispatchers.IO) {
@@ -49,7 +58,9 @@ fun AdminTeacherScreen(navController: NavHostController) {
                     courses = fetched
                 }
             } catch (e: Exception) {
-                snackbarHostState.showSnackbar("Błąd pobierania kursów: ${e.message}")
+                scope.launch {
+                    snackbarHostState.showSnackbar("Błąd pobierania kursów: ${e.message}")
+                }
             }
         }
     }
@@ -265,6 +276,22 @@ fun AdminTeacherScreen(navController: NavHostController) {
                                                 )
                                             }
                                         }
+                                        if (user.role != "ADMIN") {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            IconButton(
+                                                onClick = {
+                                                    selectedUserIdForDeletion = user.id
+                                                    selectedUsernameForDeletion = user.username
+                                                    showDeleteConfirmationDialog = true
+                                                }
+                                            ) {
+                                                Icon(
+                                                    Icons.Filled.Delete,
+                                                    contentDescription = "Usuń użytkownika",
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -423,6 +450,51 @@ fun AdminTeacherScreen(navController: NavHostController) {
                         ) {
                             Text("Anuluj")
                         }
+                    }
+                }
+            )
+        }
+
+        if (showDeleteConfirmationDialog && selectedUserIdForDeletion != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteConfirmationDialog = false
+                    selectedUserIdForDeletion = null
+                    selectedUsernameForDeletion = null
+                },
+                title = { Text("Potwierdzenie Usunięcia") },
+                text = { Text("Czy na pewno chcesz całkowicie usunąć użytkownika '${selectedUsernameForDeletion ?: "tego użytkownika"}' z systemu? Ta operacja jest nieodwracalna i usunie wszystkie dane powiązane z tym użytkownikiem.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            selectedUserIdForDeletion?.let { userId ->
+                                viewModel.deleteUserFromSystem(
+                                    userId = userId,
+                                    onSuccess = { message ->
+                                        scope.launch { snackbarHostState.showSnackbar(message) }
+                                        loadUsers()
+                                    },
+                                    onError = { errorMessage ->
+                                        scope.launch { snackbarHostState.showSnackbar("Błąd: $errorMessage") }
+                                    }
+                                )
+                            }
+                            showDeleteConfirmationDialog = false
+                            selectedUserIdForDeletion = null
+                            selectedUsernameForDeletion = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Tak, usuń")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        showDeleteConfirmationDialog = false
+                        selectedUserIdForDeletion = null
+                        selectedUsernameForDeletion = null
+                    }) {
+                        Text("Anuluj")
                     }
                 }
             )
