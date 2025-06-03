@@ -3,6 +3,7 @@ package org.example;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.example.DataBaseRepositories.*;
+import org.example.controllers.SubmissionResultDTO;
 import org.example.database.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
