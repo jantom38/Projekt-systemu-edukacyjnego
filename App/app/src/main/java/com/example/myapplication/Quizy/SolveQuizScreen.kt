@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
 import kotlin.collections.get
 
 @Composable
-fun SolveQuizScreen(navController: NavHostController, quizId: Long) {
+fun SolveQuizScreen(navController: NavHostController, quizId: Long, courseId: Long) {
     val context = LocalContext.current
     val viewModel: SolveQuizViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -36,14 +36,14 @@ fun SolveQuizScreen(navController: NavHostController, quizId: Long) {
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
-
         bottomBar = {
             if (viewModel.showSubmitButton.value) {
                 Button(
                     onClick = {
                         coroutineScope.launch {
-                            val result = viewModel.submitAnswers()        // <-- DTO
-                            navController.navigate("quiz_result/$quizId")                        }
+                            val result = viewModel.submitAnswers()
+                            navController.navigate("quiz_result/$quizId/$courseId") // Zaktualizowana trasa
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

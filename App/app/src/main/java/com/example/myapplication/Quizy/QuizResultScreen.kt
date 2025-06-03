@@ -24,6 +24,7 @@ import java.text.NumberFormat
 @Composable
 fun QuizResultScreen(
     quizId: Long,
+    courseId: Long, // Dodajemy courseId
     navController: NavHostController
 ) {
     val context = LocalContext.current
@@ -62,7 +63,6 @@ fun QuizResultScreen(
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-
                 }
             }
             else -> {
@@ -116,7 +116,9 @@ fun QuizResultScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(onClick = {
-                            navController.popBackStack("course_details/$quizId", false)
+                            navController.navigate("course_files/$courseId") {
+                                popUpTo("course_details/$courseId") { inclusive = false }
+                            }
                         }) {
                             Text("Powrót do kursu")
                         }
@@ -137,7 +139,9 @@ fun QuizResultScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = {
-                            navController.popBackStack("course_details/$quizId", false)
+                            navController.navigate("course_files/$courseId") { // Używamy courseId
+                                popUpTo("course_details/$courseId") { inclusive = false }
+                            }
                         }) {
                             Text("Powrót do kursu")
                         }

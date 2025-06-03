@@ -167,7 +167,7 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
                 else -> {
                     when (selectedTabIndex) {
                         0 -> FilesTab(viewModel.files.value, context)
-                        1 -> QuizzesTab(viewModel.quizzes.value, navController)
+                        1 -> QuizzesTab(viewModel.quizzes.value, navController, courseId)
                     }
                 }
             }
@@ -196,7 +196,7 @@ private fun FilesTab(files: List<CourseFile>, context: Context) {
     }
 }
 @Composable
-private fun QuizzesTab(quizzes: List<Quiz>, navController: NavHostController) {
+private fun QuizzesTab(quizzes: List<Quiz>, navController: NavHostController, courseId: Long) { // Dodajemy courseId
     if (quizzes.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -210,21 +210,21 @@ private fun QuizzesTab(quizzes: List<Quiz>, navController: NavHostController) {
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             items(quizzes) { quiz ->
-                QuizCard(quiz = quiz, navController = navController)
+                QuizCard(quiz = quiz, navController = navController, courseId = courseId) // Przekazujemy courseId
             }
         }
     }
 }
 
 @Composable
-fun QuizCard(quiz: Quiz, navController: NavHostController) {
+fun QuizCard(quiz: Quiz, navController: NavHostController, courseId: Long) { // Dodajemy courseId
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable {
                 quiz.id?.let {
-                    navController.navigate("solve_quiz/$it")
+                    navController.navigate("solve_quiz/$it/$courseId") // Zaktualizowana trasa
                 }
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
