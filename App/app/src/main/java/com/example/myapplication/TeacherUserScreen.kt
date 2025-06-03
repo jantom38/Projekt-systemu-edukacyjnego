@@ -66,7 +66,7 @@ fun TeacherScreen(navController: NavHostController) {
                 .withLocale(Locale("pl", "PL"))
             dateTime.format(formatter)
         } catch (e: Exception) {
-            isoDateTime // Fallback na oryginalny ciąg w razie błędu
+            isoDateTime
         }
     }
 
@@ -113,11 +113,7 @@ fun TeacherScreen(navController: NavHostController) {
         topBar = {
             TopAppBar(
                 title = { Text("Moje kursy") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
-                    }
-                },
+
                 actions = {
                     TextButton(onClick = { showCodeDialog = true }) {
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -430,7 +426,7 @@ fun AddCourseScreen(navController: NavHostController) {
     }
 }
 
-// -------------------- COURSE LIST SCREEN --------------------
+// -------------------- COURSE LIST SCREEN dla roli teacher --------------------
 @Composable
 fun CourseListScreen(
     navController: NavHostController,

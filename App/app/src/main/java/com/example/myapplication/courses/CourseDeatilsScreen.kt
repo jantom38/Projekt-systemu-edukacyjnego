@@ -129,6 +129,8 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    var selectedTabIndex by remember { mutableStateOf(0) }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -148,6 +150,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            // Pierwszy rząd przycisków
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -165,7 +168,14 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                 ) {
                     Text("Dodaj quiz")
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp)) // Odstęp między rzędami
+
+            // Drugi rząd przycisków
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Button(
                     onClick = { navController.navigate("quiz_stats/$courseId") },
                     modifier = Modifier.weight(1f),
@@ -175,6 +185,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                 ) {
                     Text("Statystyki", color = MaterialTheme.colorScheme.onSecondary)
                 }
+                Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = { navController.navigate("manage_users/$courseId") },
                     modifier = Modifier.weight(1f)
@@ -214,122 +225,133 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                 }
 
                 else -> {
-                    TabRow(selectedTabIndex = 0) {
+                    TabRow(selectedTabIndex = selectedTabIndex) {
                         Tab(
-                            selected = true,
-                            onClick = {},
+                            selected = selectedTabIndex == 0,
+                            onClick = { selectedTabIndex = 0 },
                             text = { Text("Pliki") }
                         )
                         Tab(
-                            selected = false,
-                            onClick = {},
+                            selected = selectedTabIndex == 1,
+                            onClick = { selectedTabIndex = 1 },
                             text = { Text("Quizy") }
                         )
                     }
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 16.dp)
-                    ) {
-                        item {
-                            Text(
-                                text = "Pliki",
-                                style = MaterialTheme.typography.headlineSmall,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        if (viewModel.files.value.isEmpty()) {
-                            item {
-                                Text("Brak plików dla tego kursu")
+
+                    when (selectedTabIndex) {
+                        0 -> { // Sekcja Pliki
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 16.dp)
+                            ) {
+                                item {
+                                    Text(
+                                        text = "Pliki",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                                if (viewModel.files.value.isEmpty()) {
+                                    item {
+                                        Text("Brak plików dla tego kursu")
+                                    }
+                                } else {
+                                    items(viewModel.files.value) { file ->
+                                        FileCard(file = file, context = context)
+                                    }
+                                }
                             }
-                        } else {
-                            items(viewModel.files.value) { file ->
-                                FileCard(file = file, context = context)
-                            }
                         }
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Quizy",
-                                style = MaterialTheme.typography.headlineSmall,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        if (viewModel.quizzes.value.isEmpty()) {
-                            item {
-                                Text("Brak quizów dla tego kursu")
-                            }
-                        } else {
-                            items(viewModel.quizzes.value) { quiz ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(
+                        1 -> { // Sekcja Quizy
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 16.dp)
+                            ) {
+                                item {
+                                    Text(
+                                        text = "Quizy",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                                if (viewModel.quizzes.value.isEmpty()) {
+                                    item {
+                                        Text("Brak quizów dla tego kursu")
+                                    }
+                                } else {
+                                    items(viewModel.quizzes.value) { quiz ->
+                                        Card(
                                             modifier = Modifier
-                                                .weight(1f)
-                                                .clickable { quiz.id?.let { navController.navigate("quiz_results/$it") } }
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp),
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                                         ) {
-                                            Text(
-                                                text = quiz.title,
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
-                                            quiz.description?.let {
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    text = it,
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                            }
-                                        }
-                                        Row {
-                                            IconButton(
-                                                onClick = {
-                                                    quiz.id?.let { id ->
-                                                        navController.navigate("edit_quiz/$id")
-                                                    }
-                                                },
-                                                enabled = quiz.id != null
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(16.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Icon(
-                                                    Icons.Default.Edit,
-                                                    contentDescription = "Edytuj quiz",
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = {
-                                                    quiz.id?.let { quizId ->
-                                                        viewModel.deleteQuiz(
-                                                            quizId = quizId,
-                                                            onSuccess = {
-                                                                coroutineScope.launch {
-                                                                    snackbarHostState.showSnackbar("Quiz usunięty pomyślnie")
-                                                                }
-                                                            },
-                                                            onError = { error ->
-                                                                coroutineScope.launch {
-                                                                    snackbarHostState.showSnackbar(error)
-                                                                }
-                                                            }
+                                                Column(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .clickable { quiz.id?.let { navController.navigate("quiz_results/$it") } }
+                                                ) {
+                                                    Text(
+                                                        text = quiz.title,
+                                                        style = MaterialTheme.typography.titleMedium
+                                                    )
+                                                    quiz.description?.let {
+                                                        Spacer(modifier = Modifier.height(4.dp))
+                                                        Text(
+                                                            text = it,
+                                                            style = MaterialTheme.typography.bodyMedium
                                                         )
                                                     }
-                                                },
-                                                enabled = quiz.id != null
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Delete,
-                                                    contentDescription = "Usuń quiz",
-                                                    tint = MaterialTheme.colorScheme.error
-                                                )
+                                                }
+                                                Row {
+                                                    IconButton(
+                                                        onClick = {
+                                                            quiz.id?.let { id ->
+                                                                navController.navigate("edit_quiz/$id")
+                                                            }
+                                                        },
+                                                        enabled = quiz.id != null
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.Edit,
+                                                            contentDescription = "Edytuj quiz",
+                                                            tint = MaterialTheme.colorScheme.primary
+                                                        )
+                                                    }
+                                                    IconButton(
+                                                        onClick = {
+                                                            quiz.id?.let { quizId ->
+                                                                viewModel.deleteQuiz(
+                                                                    quizId = quizId,
+                                                                    onSuccess = {
+                                                                        coroutineScope.launch {
+                                                                            snackbarHostState.showSnackbar("Quiz usunięty pomyślnie")
+                                                                        }
+                                                                    },
+                                                                    onError = { error ->
+                                                                        coroutineScope.launch {
+                                                                            snackbarHostState.showSnackbar(error)
+                                                                        }
+                                                                    }
+                                                                )
+                                                            }
+                                                        },
+                                                        enabled = quiz.id != null
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.Delete,
+                                                            contentDescription = "Usuń quiz",
+                                                            tint = MaterialTheme.colorScheme.error
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
