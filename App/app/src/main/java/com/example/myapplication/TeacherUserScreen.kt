@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,11 +10,18 @@ import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.courses.Course
@@ -23,11 +31,9 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
 
 // -------------------- TEACHER SCREEN --------------------
-
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,28 +41,43 @@ fun TeacherScreen(navController: NavHostController) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var courses by remember { mutableStateOf<List<Course>>(emptyList()) }
+
+    // Stany dla grup kursów
+    var courseGroups by remember { mutableStateOf<List<CourseGroup>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var showCreateGroupDialog by remember { mutableStateOf(false) }
+    var showDuplicateCourseDialog by remember { mutableStateOf<Pair<Long, Course>?>(null) }
+
+    // --- PRZYWRÓCONE ELEMENTY: Stany dla generowania kodu rejestracyjnego ---
     var showCodeDialog by remember { mutableStateOf(false) }
     var selectedValidity by remember { mutableStateOf("1_WEEK") }
     var expanded by remember { mutableStateOf(false) }
     var generatedCode by remember { mutableStateOf<String?>(null) }
     var expiresAt by remember { mutableStateOf<String?>(null) }
     var isGenerating by remember { mutableStateOf(false) }
+    var showDeleteGroupDialog by remember { mutableStateOf<CourseGroup?>(null) } // NOWY STAN
 
-    fun loadCourses() {
-        scope.launch(Dispatchers.IO) {
+
+    fun loadCourseGroups() {
+        scope.launch {
+            isLoading = true
             try {
                 val api = RetrofitClient.getInstance(context)
-                val fetched = api.getAllCourses()
-                withContext(Dispatchers.Main) {
-                    courses = fetched
+                val response = api.getCourseGroups()
+                if (response.isSuccessful) {
+                    courseGroups = response.body() ?: emptyList()
+                } else {
+                    snackbarHostState.showSnackbar("Błąd pobierania grup: ${response.code()}")
                 }
             } catch (e: Exception) {
-                snackbarHostState.showSnackbar("Błąd pobierania kursów: ${e.message}")
+                snackbarHostState.showSnackbar("Błąd: ${e.message}")
+            } finally {
+                isLoading = false
             }
         }
     }
 
+    // --- PRZYWRÓCONE ELEMENTY: Funkcje pomocnicze do generowania kodu ---
     fun formatExpiresAt(isoDateTime: String?): String {
         if (isoDateTime == null) return "Nieznana data"
         return try {
@@ -97,26 +118,20 @@ fun TeacherScreen(navController: NavHostController) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        loadCourses()
+
+    LaunchedEffect(Unit, navController.currentBackStackEntry) {
+        loadCourseGroups()
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { navController.navigate("add_course") },
-                icon = { Icon(Icons.Default.Add, contentDescription = "Dodaj kurs") },
-                text = { Text("Dodaj kurs") }
-            )
-        },
         topBar = {
             TopAppBar(
-                title = { Text("Moje kursy") },
-
+                title = { Text("Zarządzanie Kursami") },
+                // --- PRZYWRÓCONE ELEMENTY: Przycisk w TopAppBar ---
                 actions = {
                     TextButton(onClick = { showCodeDialog = true }) {
-                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.AccountBox,
                                 contentDescription = null,
@@ -128,170 +143,391 @@ fun TeacherScreen(navController: NavHostController) {
                     }
                 }
             )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            CourseListScreen(
-                navController = navController,
-                courses = courses,
-                onCourseClick = { course ->
-                    navController.navigate("course_details/${course.id}")
-                },
-                onDeleteCourseClick = { course ->
-                    scope.launch {
-                        try {
-                            val api = RetrofitClient.getInstance(context)
-                            val response = api.deleteCourse(course.id)
-                            if (response.isSuccessful) {
-                                snackbarHostState.showSnackbar("Kurs usunięty")
-                                loadCourses()
-                            } else {
-                                snackbarHostState.showSnackbar("Błąd usuwania kursu: ${response.code()}")
-                            }
-                        } catch (e: Exception) {
-                            snackbarHostState.showSnackbar("Błąd: ${e.message}")
-                        }
-                    }
-                },
-                onViewStatsClick = { course ->
-                    navController.navigate("quiz_stats/${course.id}")
-                }
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showCreateGroupDialog = true },
+                icon = { Icon(Icons.Default.Add, "Nowa grupa") },
+                text = { Text("Nowa grupa") }
             )
         }
-
-        if (showCodeDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showCodeDialog = false
-                    generatedCode = null
-                    expiresAt = null
-                },
-                title = { Text("Generuj kod rejestracyjny") },
-                text = {
-                    Column {
-                        if (generatedCode == null) {
-                            Text("Wybierz czas ważności kodu:")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ExposedDropdownMenuBox(
-                                expanded = expanded,
-                                onExpandedChange = { expanded = !expanded }
-                            ) {
-                                OutlinedTextField(
-                                    value = when (selectedValidity) {
-                                        "1_HOUR" -> "1 godzina"
-                                        "2_HOURS" -> "2 godziny"
-                                        "1_DAY" -> "1 dzień"
-                                        else -> "1 tydzień"
-                                    },
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                    modifier = Modifier.menuAnchor()
-                                )
-                                ExposedDropdownMenu(
-                                    expanded = expanded,
-                                    onDismissRequest = { expanded = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("1 godzina") },
-                                        onClick = {
-                                            selectedValidity = "1_HOUR"
-                                            expanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("2 godziny") },
-                                        onClick = {
-                                            selectedValidity = "2_HOURS"
-                                            expanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("1 dzień") },
-                                        onClick = {
-                                            selectedValidity = "1_DAY"
-                                            expanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("1 tydzień") },
-                                        onClick = {
-                                            selectedValidity = "1_WEEK"
-                                            expanded = false
-                                        }
-                                    )
+    ) { padding ->
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (courseGroups.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text("Nie masz jeszcze żadnych grup kursów.", textAlign = TextAlign.Center)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(courseGroups) { group ->
+                    CourseGroupCard(
+                        group = group,
+                        navController = navController,
+                        onAddCourseClick = { navController.navigate("add_course/${group.id}") },
+                        onDuplicateCourseClick = { course -> showDuplicateCourseDialog = Pair(group.id, course) },
+                        onDeleteGroupClick = { showDeleteGroupDialog = group },
+                        onDeleteCourseClick = { course ->
+                            scope.launch {
+                                try {
+                                    val response = RetrofitClient.getInstance(context).deleteCourse(course.id)
+                                    if (response.isSuccessful) {
+                                        snackbarHostState.showSnackbar("Kurs usunięty")
+                                        loadCourseGroups()
+                                    } else {
+                                        snackbarHostState.showSnackbar("Błąd usuwania kursu: ${response.code()}")
+                                    }
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar("Błąd: ${e.message}")
                                 }
                             }
-                        } else {
-                            Column {
-                                Text(
-                                    text = "Wygenerowany kod:",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Kod: $generatedCode",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                                Text(
-                                    text = "Ważny do: ${formatExpiresAt(expiresAt)}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(8.dp)
-                                )
+                        }
+                    )
+                }
+            }
+        }
+    }
+    if (showDeleteGroupDialog != null) {
+        val groupToDelete = showDeleteGroupDialog!!
+        AlertDialog(
+            onDismissRequest = { showDeleteGroupDialog = null },
+            title = { Text("Potwierdź usunięcie") },
+            text = { Text("Czy na pewno chcesz usunąć grupę '${groupToDelete.name}'? Kursy wewnątrz tej grupy nie zostaną usunięte, ale stracą powiązanie z grupą.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                val api = RetrofitClient.getInstance(context)
+                                val response = api.deleteCourseGroup(groupToDelete.id)
+                                if (response.isSuccessful && response.body()?.success == true) {
+                                    snackbarHostState.showSnackbar(response.body()!!.message)
+                                    loadCourseGroups() // Odśwież listę
+                                } else {
+                                    snackbarHostState.showSnackbar(response.body()?.message ?: "Błąd usuwania grupy")
+                                }
+                            } catch (e: Exception) {
+                                snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                            } finally {
+                                showDeleteGroupDialog = null
                             }
                         }
-                    }
-                },
-                confirmButton = {
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Tak, usuń")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteGroupDialog = null }) { Text("Anuluj") }
+            }
+        )
+    }
+    // --- PRZYWRÓCONE ELEMENTY: Okno dialogowe do generowania kodu ---
+    if (showCodeDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showCodeDialog = false
+                generatedCode = null
+                expiresAt = null
+            },
+            title = { Text("Generuj kod rejestracyjny") },
+            text = {
+                Column {
                     if (generatedCode == null) {
-                        Button(
-                            onClick = { generateStudentCode() },
-                            enabled = !isGenerating
+                        Text("Wybierz czas ważności kodu:")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded }
                         ) {
-                            if (isGenerating) {
-                                CircularProgressIndicator(
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(24.dp)
+                            OutlinedTextField(
+                                value = when (selectedValidity) {
+                                    "1_HOUR" -> "1 godzina"
+                                    "2_HOURS" -> "2 godziny"
+                                    "1_DAY" -> "1 dzień"
+                                    else -> "1 tydzień"
+                                },
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("1 godzina") },
+                                    onClick = {
+                                        selectedValidity = "1_HOUR"
+                                        expanded = false
+                                    }
                                 )
-                            } else {
-                                Text("Generuj")
+                                DropdownMenuItem(
+                                    text = { Text("2 godziny") },
+                                    onClick = {
+                                        selectedValidity = "2_HOURS"
+                                        expanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("1 dzień") },
+                                    onClick = {
+                                        selectedValidity = "1_DAY"
+                                        expanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("1 tydzień") },
+                                    onClick = {
+                                        selectedValidity = "1_WEEK"
+                                        expanded = false
+                                    }
+                                )
                             }
                         }
                     } else {
-                        Button(
-                            onClick = {
-                                showCodeDialog = false
-                                generatedCode = null
-                                expiresAt = null
-                            }
-                        ) {
-                            Text("Zamknij")
-                        }
-                    }
-                },
-                dismissButton = {
-                    if (generatedCode == null) {
-                        TextButton(
-                            onClick = {
-                                showCodeDialog = false
-                                generatedCode = null
-                                expiresAt = null
-                            }
-                        ) {
-                            Text("Anuluj")
+                        Column {
+                            Text(
+                                text = "Wygenerowany kod:",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Kod: $generatedCode",
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                            Text(
+                                text = "Ważny do: ${formatExpiresAt(expiresAt)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(8.dp)
+                            )
                         }
                     }
                 }
+            },
+            confirmButton = {
+                if (generatedCode == null) {
+                    Button(
+                        onClick = { generateStudentCode() },
+                        enabled = !isGenerating
+                    ) {
+                        if (isGenerating) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Text("Generuj")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            showCodeDialog = false
+                            generatedCode = null
+                            expiresAt = null
+                        }
+                    ) {
+                        Text("Zamknij")
+                    }
+                }
+            },
+            dismissButton = {
+                if (generatedCode == null) {
+                    TextButton(
+                        onClick = {
+                            showCodeDialog = false
+                            generatedCode = null
+                            expiresAt = null
+                        }
+                    ) {
+                        Text("Anuluj")
+                    }
+                }
+            }
+        )
+    }
+
+
+    if (showCreateGroupDialog) {
+        CreateCourseGroupDialog(
+            onDismiss = { showCreateGroupDialog = false },
+            onCreate = { name, description ->
+                scope.launch {
+                    try {
+                        val response = RetrofitClient.getInstance(context).createCourseGroup(mapOf("name" to name, "description" to description))
+                        if (response.isSuccessful) {
+                            snackbarHostState.showSnackbar("Grupa utworzona")
+                            showCreateGroupDialog = false
+                            loadCourseGroups()
+                        } else {
+                            snackbarHostState.showSnackbar("Błąd: ${response.errorBody()?.string()}")
+                        }
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                    }
+                }
+            }
+        )
+    }
+
+    showDuplicateCourseDialog?.let { (groupId, course) ->
+        DuplicateCourseDialog(
+            originalCourseName = course.courseName,
+            onDismiss = { showDuplicateCourseDialog = null },
+            onDuplicate = { newName, newAccessKey ->
+                scope.launch {
+                    try {
+                        val api = RetrofitClient.getInstance(context)
+                        val response = api.duplicateCourse(groupId, course.id, mapOf("newCourseName" to newName, "newAccessKey" to newAccessKey))
+                        if (response.isSuccessful && response.body()?.success == true) {
+                            snackbarHostState.showSnackbar(response.body()?.message ?: "Kurs zduplikowany")
+                            loadCourseGroups()
+                        } else {
+                            snackbarHostState.showSnackbar(response.body()?.message ?: "Błąd duplikowania")
+                        }
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                    } finally {
+                        showDuplicateCourseDialog = null
+                    }
+                }
+            }
+        )
+    }
+}
+@Composable
+fun CourseGroupCard(
+    group: CourseGroup,
+    navController: NavHostController,
+    onAddCourseClick: () -> Unit,
+    onDuplicateCourseClick: (Course) -> Unit,
+    onDeleteCourseClick: (Course) -> Unit,
+    onDeleteGroupClick: () -> Unit // NOWY PARAMETR
+
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            ListItem(
+                headlineContent = { Text(group.name, style = MaterialTheme.typography.titleLarge) },
+                supportingContent = { group.description?.let { Text(it) } },
+                trailingContent = {
+                    Row {
+                        // NOWY PRZYCISK
+                        IconButton(onClick = onDeleteGroupClick) {
+                            Icon(Icons.Default.DeleteForever, "Usuń grupę", tint = MaterialTheme.colorScheme.error)
+                        }
+                        IconButton(onClick = { expanded = !expanded }) {
+                            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Rozwiń")
+                        }
+                    }
+                },
+                modifier = Modifier.clickable { expanded = !expanded }
             )
+            AnimatedVisibility(visible = expanded) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    group.courses.forEach { course ->
+                        Divider()
+                        CourseItemRow(
+                            course = course,
+                            onDetailsClick = { navController.navigate("course_details/${course.id}") },
+                            onDuplicateClick = { onDuplicateCourseClick(course) },
+                            onDeleteClick = { onDeleteCourseClick(course) }
+                        )
+                    }
+                    Divider()
+                    TextButton(onClick = onAddCourseClick, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Dodaj nową wersję kursu")
+                    }
+                }
+            }
         }
     }
 }
+
+@Composable
+fun CourseItemRow(
+    course: Course,
+    onDetailsClick: () -> Unit,
+    onDuplicateClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(course.courseName, Modifier
+            .weight(1f)
+            .clickable(onClick = onDetailsClick))
+        Row {
+            IconButton(onClick = onDuplicateClick, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.ContentCopy, "Duplikuj", tint = MaterialTheme.colorScheme.secondary)
+            }
+            IconButton(onClick = onDeleteClick, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.Delete, "Usuń", tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+fun CreateCourseGroupDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nowa grupa kursów") },
+        text = {
+            Column {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nazwa grupy") })
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Opis (opcjonalnie)") })
+            }
+        },
+        confirmButton = { Button(onClick = { onCreate(name, description) }, enabled = name.isNotBlank()) { Text("Utwórz") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
+    )
+}
+
+@Composable
+fun DuplicateCourseDialog(originalCourseName: String, onDismiss: () -> Unit, onDuplicate: (String, String) -> Unit) {
+    var newName by remember { mutableStateOf("$originalCourseName - Kopia") }
+    var newAccessKey by remember { mutableStateOf(UUID.randomUUID().toString().take(8).uppercase()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Duplikuj kurs") },
+        text = {
+            Column {
+                OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("Nowa nazwa kursu") })
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = newAccessKey, onValueChange = { newAccessKey = it }, label = { Text("Nowy klucz dostępu") })
+            }
+        },
+        confirmButton = { Button(onClick = { onDuplicate(newName, newAccessKey) }, enabled = newName.isNotBlank() && newAccessKey.isNotBlank()) { Text("Duplikuj") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
+    )
+}
+
+
+
+
 // -------------------- USER SCREEN --------------------
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -299,45 +535,77 @@ fun UserScreen(navController: NavHostController) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var courses by remember { mutableStateOf<List<Course>>(emptyList()) }
+    // ZMIANA: Przechowujemy teraz listę CourseGroup
+    var courseGroups by remember { mutableStateOf<List<CourseGroup>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         scope.launch(Dispatchers.IO) {
+            isLoading = true
             try {
                 val api = RetrofitClient.getInstance(context)
-                val fetched = api.getAllCourses()
+                // ZMIANA: Wywołujemy nowy endpoint
+                val response = api.getCourseGroups()
                 withContext(Dispatchers.Main) {
-                    courses = fetched
+                    if (response.isSuccessful) {
+                        courseGroups = response.body() ?: emptyList()
+                    } else {
+                        snackbarHostState.showSnackbar("Błąd pobierania kursów: ${response.code()}")
+                    }
                 }
             } catch (e: Exception) {
-                snackbarHostState.showSnackbar("Błąd pobierania kursów: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                }
+            } finally {
+                isLoading = false
             }
         }
     }
 
     Scaffold(
+        topBar = { TopAppBar(title = { Text("Dostępne Kursy") }) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            CourseListScreen(
-                navController = navController,
-                courses = courses,
-                onCourseClick = { course ->
-                    navController.navigate("access_key/${course.id}")
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(courseGroups) { group ->
+                    // Karta dla CourseGroup
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                // ZMIANA: Nawigujemy do ekranu zapisu z ID grupy
+                                navController.navigate("enroll_in_group/${group.id}")
+                            },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(group.name, style = MaterialTheme.typography.titleLarge)
+                            group.description?.let {
+                                Spacer(Modifier.height(4.dp))
+                                Text(it, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
                 }
-            )
+            }
         }
     }
 }
-
 // -------------------- ADD COURSE SCREEN --------------------
 @Composable
-fun AddCourseScreen(navController: NavHostController) {
+fun AddCourseScreen(navController: NavHostController, courseGroupId: Long) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -360,7 +628,7 @@ fun AddCourseScreen(navController: NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Dodaj kurs", style = MaterialTheme.typography.headlineSmall)
+                Text("Dodaj nową wersję kursu", style = MaterialTheme.typography.headlineSmall)
                 TextButton(onClick = { navController.popBackStack() }) {
                     Text("Anuluj")
                 }
@@ -371,7 +639,7 @@ fun AddCourseScreen(navController: NavHostController) {
             OutlinedTextField(
                 value = courseName,
                 onValueChange = { courseName = it },
-                label = { Text("Nazwa kursu") },
+                label = { Text("Nazwa kursu (np. Edycja letnia 2025)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -400,25 +668,26 @@ fun AddCourseScreen(navController: NavHostController) {
                     scope.launch {
                         try {
                             val api = RetrofitClient.getInstance(context)
-                            val response = api.createCourse(
-                                Course(
-                                    courseName = courseName,
-                                    description = description,
-                                    accessKey = accessKey
-                                )
+                            val courseData = mapOf(
+                                "courseName" to courseName,
+                                "description" to description,
+                                "accessKey" to accessKey,
+                                "courseGroupId" to courseGroupId
                             )
+                            val response = api.createCourse(courseData)
                             if (response.isSuccessful) {
                                 snackbarHostState.showSnackbar("Kurs dodany")
                                 navController.popBackStack()
                             } else {
-                                snackbarHostState.showSnackbar("Błąd: ${response.code()}")
+                                snackbarHostState.showSnackbar("Błąd: ${response.code()} - ${response.errorBody()?.string()}")
                             }
                         } catch (e: Exception) {
                             snackbarHostState.showSnackbar("Błąd: ${e.message}")
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = courseName.isNotBlank() && accessKey.isNotBlank()
             ) {
                 Text("Zapisz kurs")
             }

@@ -1,11 +1,7 @@
 package org.example.database;
 
 import jakarta.annotation.PostConstruct;
-import org.example.DataBaseRepositories.CourseFileRepository;
-import org.example.DataBaseRepositories.CourseRepository;
-import org.example.DataBaseRepositories.QuizQuestionRepository;
-import org.example.DataBaseRepositories.QuizRepository;
-import org.example.DataBaseRepositories.UserRepository;
+import org.example.DataBaseRepositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -19,24 +15,22 @@ public class DataInitializer {
     @Autowired
     private CourseRepository courseRepository;
 
+    // DODANO REPOZYTORIUM DLA GRUP KURSÓW
+    @Autowired
+    private CourseGroupRepository courseGroupRepository;
+
     @Autowired
     private CourseFileRepository courseFileRepository;
-
-    @Autowired
-    private QuizRepository quizRepository;
-
-    @Autowired
-    private QuizQuestionRepository quizQuestionRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @PostConstruct
     public void init() {
+        // Inicjalizacja w odpowiedniej kolejności
         initUsers();
-        initCourses();
+        initCourseGroupsAndCourses();
         initCourseFiles();
-
     }
 
     private void initUsers() {
@@ -54,7 +48,6 @@ public class DataInitializer {
             admin.setRole(UserRole.ADMIN);
             userRepository.save(admin);
         }
-
         if (userRepository.findByUsername("teacher").isEmpty()) {
             User teacher = new User();
             teacher.setUsername("teacher");
@@ -71,38 +64,68 @@ public class DataInitializer {
         }
     }
 
-    private void initCourses() {
-        if (courseRepository.count() == 0) {
+    // ZASTĄPIONO STARE METODY JEDNĄ, POPRAWNĄ METODĄ
+    private void initCourseGroupsAndCourses() {
+        // Upewniamy się, że dane są dodawane tylko raz, sprawdzając repozytorium grup
+        if (courseGroupRepository.count() == 0) {
+            // Pobieramy nauczycieli
             User teacher = userRepository.findByUsername("teacher")
-                    .orElseThrow();
+                    .orElseThrow(() -> new RuntimeException("Teacher 'teacher' not found"));
+            User teacher1 = userRepository.findByUsername("teacher1")
+                    .orElseThrow(() -> new RuntimeException("Teacher 'teacher1' not found"));
+
+            // --- GRUPA 1: KURSY JAVY ---
+            CourseGroup javaGroup = new CourseGroup();
+            javaGroup.setName("Programowanie w Javie");
+            javaGroup.setDescription("Grupa kursów poświęcona nauce języka Java na różnych poziomach zaawansowania.");
+            javaGroup.setTeacher(teacher);
+            courseGroupRepository.save(javaGroup); // Zapisz grupę, aby uzyskać ID
+
+            // Kurs 1 w grupie Java
             Course course1 = new Course();
-            course1.setCourseName("Java Basics");
-            course1.setDescription("Introduction to Java programming");
-            course1.setAccessKey("JAVA-101");
+            course1.setCourseName("Java Basics - Edycja Jesień 2024");
+            course1.setDescription("Wprowadzenie do programowania w języku Java.");
+            course1.setAccessKey("JAVA-FALL24");
             course1.setTeacher(teacher);
+            course1.setCourseGroup(javaGroup); // Przypisanie kursu do grupy
             courseRepository.save(course1);
+
+            // Kurs 2 w grupie Java
+            Course course2 = new Course();
+            course2.setCourseName("Java Advanced - Edycja Wiosna 2025");
+            course2.setDescription("Zaawansowane techniki i wzorce projektowe w Javie.");
+            course2.setAccessKey("JAVA-SPR25");
+            course2.setTeacher(teacher);
+            course2.setCourseGroup(javaGroup); // Przypisanie kursu do tej samej grupy
+            courseRepository.save(course2);
+
+
+            // --- GRUPA 2: SZKOLENIA BHP ---
+            CourseGroup bhpGroup = new CourseGroup();
+            bhpGroup.setName("Szkolenia BHP");
+            bhpGroup.setDescription("Okresowe szkolenia z Bezpieczeństwa i Higieny Pracy.");
+            bhpGroup.setTeacher(teacher1);
+            courseGroupRepository.save(bhpGroup);
+
+            // Kurs 1 w grupie BHP
+            Course courseBHP = new Course();
+            courseBHP.setCourseName("BHP dla Pracowników Biurowych 2025");
+            courseBHP.setDescription("Obowiązkowe szkolenie okresowe dla pracowników administracyjno-biurowych.");
+            courseBHP.setAccessKey("BHP-ADM25");
+            courseBHP.setTeacher(teacher1);
+            courseBHP.setCourseGroup(bhpGroup);
+            courseRepository.save(courseBHP);
         }
     }
 
     private void initCourseFiles() {
         if (courseFileRepository.count() == 0) {
-            Course javaCourse = courseRepository.findByCourseName("Java Basics")
-                    .orElseThrow(() -> new RuntimeException("Kurs 'Java Basics' nie znaleziony!"));
+            // ZAKTUALIZOWANO NAZWĘ KURSU, ABY PASOWAŁA DO NOWYCH DANYCH
+            Course javaCourse = courseRepository.findByCourseName("Java Basics - Edycja Jesień 2024")
+                    .orElseThrow(() -> new RuntimeException("Kurs 'Java Basics - Edycja Jesień 2024' nie znaleziony!"));
 
-            // Spójne nazwy plików (małe litery + podkreślenia)
             courseFileRepository.save(new CourseFile("java_intro.pdf", "/files/java_intro.pdf", javaCourse));
-            courseFileRepository.save(new CourseFile("java_exercises.zip", "/files/java_exercises.zip", javaCourse));
+            courseFileRepository.save(new CourseFile("java_syntax.pdf", "/files/java_syntax.pdf", javaCourse));
         }
     }
-
-        }
-// pliki do kursu nauczycieli
-//INSERT INTO course_file (file_name, file_url, course_id) VALUES
-//('I. Regulacje prawne.doc', '/files/I. Regulacje prawne.doc', 2),
-//        ('II. Ocena zagrożeń.doc', '/files/II. Ocena zagrożeń.doc', 2),
-//        ('III. Organ. stanowisk pracy.doc', '/files/III. Organ. stanowisk pracy.doc', 2),
-//        ('IV. Wypadki, choroby zaw..doc', '/files/IV. Wypadki, choroby zaw..doc', 2),
-//        ('V. Ochrona ppoż..doc', '/files/V. Ochrona ppoż..doc', 2),
-//        ('AED + BHP2.docx', '/files/AED + BHP2.docx', 2),
-//        ('Ma. Charakterystyczne wypadki w PŚk..docx', '/files/Ma. Charakterystyczne wypadki w PŚk..docx', 2),
-//        ('System udzielania I pomocy w PŚk.docx', '/files/System udzielania I pomocy w PŚk.docx', 2);
+}

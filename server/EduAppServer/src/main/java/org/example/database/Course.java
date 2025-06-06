@@ -17,6 +17,13 @@ public class Course {
 @JoinColumn(name = "teacher_id", nullable = false)
 @JsonIgnore
 private User teacher;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_group_id")
+    @JsonIgnore
+    private CourseGroup courseGroup;
+
     // Gettery i settery
     public Long getId() { return id; }
     public String getCourseName() { return courseName; }
@@ -27,4 +34,7 @@ private User teacher;
     public void setAccessKey(String accessKey) { this.accessKey = accessKey; }
     public User getTeacher() {return teacher;}
     public void setTeacher(User teacher) {this.teacher = teacher;}
+
+    public CourseGroup getCourseGroup() { return courseGroup; }
+    public void setCourseGroup(CourseGroup courseGroup) { this.courseGroup = courseGroup; }
 }

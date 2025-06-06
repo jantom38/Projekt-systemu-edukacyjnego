@@ -31,16 +31,19 @@ public class CourseController {
     private final CourseFileRepository courseFileRepository;
     private final UserRepository userRepository;
     private final UserCourseRepository userCourseRepository;
+    private final CourseGroupRepository courseGroupRepository; // DODANO REPOZYTORIUM GRUP
 
     @Autowired
     public CourseController(CourseRepository courseRepository,
                             CourseFileRepository courseFileRepository,
                             UserRepository userRepository,
-                            UserCourseRepository userCourseRepository) {
+                            UserCourseRepository userCourseRepository,
+                            CourseGroupRepository courseGroupRepository) { // DODANO W KONSTRUKTORZE
         this.courseRepository = courseRepository;
         this.courseFileRepository = courseFileRepository;
         this.userRepository = userRepository;
         this.userCourseRepository = userCourseRepository;
+        this.courseGroupRepository = courseGroupRepository; // DODANO
     }
 
     @GetMapping
@@ -54,18 +57,44 @@ public class CourseController {
         return courseRepository.findAll();
     }
 
+    // =================================================================================
+    // =========== POPRAWIONA METODA addCourse - KLUCZOWA ZMIANA =======================
+    // =================================================================================
     @PostMapping
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
-    public ResponseEntity<?> addCourse(@RequestBody Course course) {
-        if (course.getAccessKey() == null || course.getAccessKey().isBlank()) {
+    public ResponseEntity<?> addCourse(@RequestBody Map<String, Object> request) {
+        String courseName = (String) request.get("courseName");
+        String description = (String) request.get("description");
+        String accessKey = (String) request.get("accessKey");
+        // Poprawne odczytanie courseGroupId jako Integer, a następnie konwersja do Long
+        Integer courseGroupIdInt = (Integer) request.get("courseGroupId");
+        Long courseGroupId = courseGroupIdInt != null ? courseGroupIdInt.longValue() : null;
+
+
+        if (accessKey == null || accessKey.isBlank() || courseName == null || courseName.isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", "Klucz dostępu jest wymagany"));
+                    .body(Map.of("success", false, "message", "Nazwa kursu i klucz dostępu są wymagane"));
         }
 
         User teacher = userRepository.findByUsername(Utils.currentUsername())
                 .orElseThrow(() -> new RuntimeException("Zalogowany użytkownik nie istnieje"));
 
+        Course course = new Course();
+        course.setCourseName(courseName);
+        course.setDescription(description);
+        course.setAccessKey(accessKey);
         course.setTeacher(teacher);
+
+        // Jeśli podano courseGroupId, znajdź grupę i przypisz ją do kursu
+        if (courseGroupId != null) {
+            CourseGroup group = courseGroupRepository.findById(courseGroupId)
+                    .orElseThrow(() -> new RuntimeException("Grupa kursów o podanym ID nie istnieje"));
+            course.setCourseGroup(group);
+        } else {
+            // Opcjonalnie: obsłuż przypadek, gdy kurs jest tworzony bez grupy
+            log.warn("Tworzenie kursu '{}' bez przypisania do grupy.", courseName);
+        }
+
         Course savedCourse = courseRepository.save(course);
 
         return ResponseEntity.ok(Map.of(
@@ -74,6 +103,7 @@ public class CourseController {
                 "course", savedCourse
         ));
     }
+
 
     @PostMapping("/{id}/verify-key")
     public ResponseEntity<?> verifyAccessKey(@PathVariable Long id,

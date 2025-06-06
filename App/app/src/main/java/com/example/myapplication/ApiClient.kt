@@ -15,6 +15,14 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 
+// NOWY MODEL DANYCH
+data class CourseGroup(
+    val id: Long,
+    val name: String,
+    val description: String?,
+    val courses: List<Course>
+)
+
 // Existing data classes remain unchanged
 data class UserCourseInfo(
     val id: Long,
@@ -154,6 +162,34 @@ interface CourseApiService {
     @GET("/api/courses")
     suspend fun getAllCourses(): List<Course>
 
+    // ZAKTUALIZOWANA METODA - przyjmuje mapę, zgodnie ze zmianami w backendzie
+    @POST("/api/courses")
+    suspend fun createCourse(@Body courseData: Map<String, @JvmSuppressWildcards Any?>): Response<Map<String, Any>>
+
+    @DELETE("/api/courses/{id}")
+    suspend fun deleteCourse(@Path("id") id: Long): Response<Map<String, Any>>
+
+    @GET("/api/course-groups")
+    suspend fun getCourseGroups(): Response<List<CourseGroup>>
+    @POST("/api/course-groups/{groupId}/enroll")
+    suspend fun enrollInCourseGroup(
+        @Path("groupId") groupId: Long,
+        @Body request: Map<String, String>
+    ): Response<GenericResponse>
+    @DELETE("/api/course-groups/{groupId}")
+    suspend fun deleteCourseGroup(@Path("groupId") groupId: Long): Response<GenericResponse>
+
+    @POST("/api/course-groups")
+    suspend fun createCourseGroup(@Body request: Map<String, String>): Response<CourseGroup>
+
+    @POST("/api/course-groups/{groupId}/courses/{courseId}/duplicate")
+    suspend fun duplicateCourse(
+        @Path("groupId") groupId: Long,
+        @Path("courseId") courseId: Long,
+        @Body request: Map<String, String>
+    ): Response<GenericResponse>
+
+
     @POST("/api/courses/{id}/verify-key")
     suspend fun verifyAccessKey(
         @Path("id") courseId: Long,
@@ -162,12 +198,6 @@ interface CourseApiService {
 
     @GET("/api/courses/{id}/files")
     suspend fun getCourseFiles(@Path("id") courseId: Long): List<CourseFile>
-
-    @POST("/api/courses")
-    suspend fun createCourse(@Body course: Course): Response<Course>
-
-    @DELETE("/api/courses/{id}")
-    suspend fun deleteCourse(@Path("id") id: Long): Response<Map<String, Any>>
 
     @GET("/api/courses/{courseId}/users")
     suspend fun getCourseUsers(
@@ -179,9 +209,10 @@ interface CourseApiService {
         @Path("courseId") courseId: Long,
         @Path("userId") userId: Long
     ): Response<GenericResponse>
-    // NOWA METODA:
+
     @DELETE("/api/courses/users/{userId}")
     suspend fun deleteUserFromSystem(@Path("userId") userId: Long): Response<GenericResponse>
+
     @Multipart
     @POST("/api/courses/{courseId}/files/upload")
     suspend fun uploadFile(
@@ -206,8 +237,10 @@ interface CourseApiService {
         @Path("id") courseId: Long,
         @Body quiz: Quiz
     ): Response<QuizResponse>
+
     @GET("/api/courses/quizzes/{quizId}/edit")
     suspend fun getQuizForEdit(@Path("quizId") quizId: Long): Response<QuizResponse>
+
     @PUT("/api/courses/quizzes/{quizId}")
     suspend fun updateQuiz(
         @Path("quizId") quizId: Long,

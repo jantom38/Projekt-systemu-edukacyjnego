@@ -20,6 +20,7 @@ import com.example.myapplication.courses.AccessKeyScreen
 import com.example.myapplication.courses.CourseDetailsScreen
 import com.example.myapplication.courses.CourseListScreen
 import com.example.myapplication.courses.CourseUsersScreen
+import com.example.myapplication.courses.EnrollToGroupScreen
 import com.example.myapplication.courses.MyCoursesScreen
 import com.example.myapplication.files.CourseFilesScreen
 import com.example.myapplication.files.ManageFilesScreen
@@ -49,9 +50,20 @@ fun EduApp() {
         composable("register") { RegisterScreen(navController) }
         composable("courses") { CourseListScreen(navController) }
         composable("user") { UserScreen(navController) }
-        composable("teacher") { TeacherScreen(navController) }
-        composable("admin_teacher") { AdminTeacherScreen(navController) }
-        composable("add_course") { AddCourseScreen(navController) }
+
+        // ZMIENIONA NAWIGACJA DLA NAUCZYCIELA I ADMINA
+        composable("teacher") { TeacherScreen(navController) } // Nowy ekran zarządzania grupami
+        composable("admin_teacher") { AdminTeacherScreen(navController) } // Można to docelowo połączyć z "teacher"
+
+        // ZMIENIONA TRASA - teraz wymaga ID grupy kursu
+        composable(
+            "add_course/{courseGroupId}",
+            arguments = listOf(navArgument("courseGroupId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val courseGroupId = backStackEntry.arguments?.getLong("courseGroupId") ?: return@composable
+            AddCourseScreen(navController, courseGroupId)
+        }
+
         composable(
             "manage_files/{courseId}",
             arguments = listOf(navArgument("courseId") { type = NavType.LongType })
@@ -68,13 +80,12 @@ fun EduApp() {
             CourseFilesScreen(navController, courseId)
         }
         composable(
-            "access_key/{courseId}",
-            arguments = listOf(navArgument("courseId") { type = NavType.LongType })
+            "enroll_in_group/{courseGroupId}",
+            arguments = listOf(navArgument("courseGroupId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getLong("courseId") ?: return@composable
-            AccessKeyScreen(navController, courseId = courseId) {
-                navController.popBackStack("menu", false)
-            }
+            val courseGroupId = backStackEntry.arguments?.getLong("courseGroupId") ?: return@composable
+            // Upewnij się, że wywołujesz poprawny Composable - EnrollToGroupScreen
+            EnrollToGroupScreen(navController, courseGroupId = courseGroupId)
         }
         composable("system_users") { SystemUsersScreen(navController) }
         composable(
