@@ -197,6 +197,7 @@ public class CourseController {
                 .orElse(ResponseEntity.status(404)
                         .body(Map.of("success", false, "message", "Plik nie znaleziony dla tego kursu")));
     }
+    @PreAuthorize("hasRole('student')")
 
     @GetMapping("/my-courses")
     public ResponseEntity<?> getUserCourses() {
@@ -218,6 +219,7 @@ public class CourseController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+    @Transactional
     public ResponseEntity<?> deleteCourse(@PathVariable Long id) {
         Authentication auth = Utils.getAuthentication();
         if (Utils.isTeacher(auth) && courseRepository.findByIdAndTeacherUsername(id, Utils.currentUsername()).isEmpty()) {
@@ -227,10 +229,15 @@ public class CourseController {
 
         return courseRepository.findById(id)
                 .map(course -> {
+                    // Najpierw usuwamy wszystkie powiązania user-course dla tego kursu
+                    userCourseRepository.deleteByCourseId(id);
+
+                    // Następnie usuwamy sam kurs
                     courseRepository.delete(course);
+
                     return ResponseEntity.ok(Map.of(
                             "success", true,
-                            "message", "Kurs usunięty pomyślnie"
+                            "message", "Kurs usunięty pomyślnie wraz z powiązaniami użytkowników"
                     ));
                 })
                 .orElse(ResponseEntity.status(404)
