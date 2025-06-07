@@ -46,7 +46,7 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
             _error.value = null
             try {
                 // Fetch the entire quiz to find the specific question
-                val response = apiService.getQuiz(quizId)
+                val response = apiService.getQuizForEdit(quizId)
                 if (response.isSuccessful && response.body()?.success == true) {
                     val quiz = response.body()?.quiz
                     _question.value = quiz?.questions?.find { it.id == questionId }
