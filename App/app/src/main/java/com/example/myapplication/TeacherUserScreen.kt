@@ -585,7 +585,6 @@ fun UserScreen(navController: NavHostController) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                // ZMIANA: Nawigujemy do ekranu zapisu z ID grupy
                                 navController.navigate("enroll_in_group/${group.id}")
                             },
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -746,7 +745,7 @@ fun CourseListScreen(
 }
 
 
-// -------------------- (jeśli potrzebujesz też) }
+// -------------------- }
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun TeacherQuizStatsScreen(navController: NavHostController, courseId: Long) {

@@ -111,7 +111,7 @@ fun CourseFilesScreen(navController: NavHostController, courseId: Long) {
             TopAppBar(
                 title = { Text("Kurs") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("menu") }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
                     }
                 }
