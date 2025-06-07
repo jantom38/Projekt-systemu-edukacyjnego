@@ -50,10 +50,11 @@ fun AdminTeacherScreen(navController: NavHostController) {
     var selectedUserIdForDeletion by remember { mutableStateOf<Long?>(null) }
     var selectedUsernameForDeletion by remember { mutableStateOf<String?>(null) }
     var showDuplicateCourseDialog by remember { mutableStateOf<Pair<Long, Course>?>(null) }
-    var showCreateGroupDialog by remember { mutableStateOf(false) }
+    var showCreateGroupDialog by remember { mutableStateOf(false) } // Dodane
     var showDeleteGroupDialog by remember { mutableStateOf<CourseGroup?>(null) }
 
     val viewModel: SystemUsersViewModel = viewModel(factory = SystemUsersViewModel.Factory(context))
+
     fun formatExpiresAt(isoDateTime: String?): String {
         if (isoDateTime == null) return "Nieznana data"
         return try {
@@ -66,6 +67,7 @@ fun AdminTeacherScreen(navController: NavHostController) {
             isoDateTime
         }
     }
+
     fun generateStudentCode() {
         isGenerating = true
         scope.launch(Dispatchers.IO) {
@@ -92,6 +94,7 @@ fun AdminTeacherScreen(navController: NavHostController) {
             }
         }
     }
+
     fun loadCourseGroups() {
         scope.launch(Dispatchers.IO) {
             try {
@@ -196,7 +199,6 @@ fun AdminTeacherScreen(navController: NavHostController) {
                 },
                 actions = {
                     if (!showUsers) {
-                        // Dodaj ten przycisk
                         TextButton(onClick = { showCodeDialog = true }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
@@ -208,12 +210,12 @@ fun AdminTeacherScreen(navController: NavHostController) {
                                 Text("Generuj kod rejestracyjny")
                             }
                         }
-                        // Istniejący przycisk
                         TextButton(onClick = { showUsers = true }) {
                             Text("Zarządzaj użytkownikami")
                         }
                     }
-                }            )
+                }
+            )
         },
         floatingActionButton = {
             if (!showUsers) {
@@ -303,245 +305,266 @@ fun AdminTeacherScreen(navController: NavHostController) {
                         )
                     }
                 }
-
             }
         }
-        if (showCodeDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showCodeDialog = false
-                    generatedCode = null
-                    expiresAt = null
-                },
-                title = { Text("Generuj kod rejestracyjny") },
-                text = {
-                    Column {
-                        if (generatedCode == null) {
-                            Text("Wybierz czas ważności kodu:")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ExposedDropdownMenuBox(
-                                expanded = expanded,
-                                onExpandedChange = { expanded = !expanded }
-                            ) {
-                                OutlinedTextField(
-                                    value = when (selectedValidity) {
-                                        "1_HOUR" -> "1 godzina"
-                                        "2_HOURS" -> "2 godziny"
-                                        "1_DAY" -> "1 dzień"
-                                        else -> "1 tydzień"
-                                    },
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                    modifier = Modifier.menuAnchor()
-                                )
-                                ExposedDropdownMenu(
-                                    expanded = expanded,
-                                    onDismissRequest = { expanded = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("1 godzina") },
-                                        onClick = {
-                                            selectedValidity = "1_HOUR"
-                                            expanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("2 godziny") },
-                                        onClick = {
-                                            selectedValidity = "2_HOURS"
-                                            expanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("1 dzień") },
-                                        onClick = {
-                                            selectedValidity = "1_DAY"
-                                            expanded = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("1 tydzień") },
-                                        onClick = {
-                                            selectedValidity = "1_WEEK"
-                                            expanded = false
-                                        }
-                                    )
-                                }
-                            }
+    }
+
+    // Dodane: Dialog do tworzenia nowej grupy
+    if (showCreateGroupDialog) {
+        CreateCourseGroupDialog(
+            onDismiss = { showCreateGroupDialog = false },
+            onCreate = { name, description ->
+                scope.launch {
+                    try {
+                        val response = RetrofitClient.getInstance(context)
+                            .createCourseGroup(mapOf("name" to name, "description" to description))
+                        if (response.isSuccessful) {
+                            snackbarHostState.showSnackbar("Grupa utworzona")
+                            showCreateGroupDialog = false
+                            loadCourseGroups()
                         } else {
-                            Column {
-                                Text(
-                                    text = "Wygenerowany kod:",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Kod: $generatedCode",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                                Text(
-                                    text = "Ważny do: ${formatExpiresAt(expiresAt)}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
+                            snackbarHostState.showSnackbar("Błąd: ${response.errorBody()?.string()}")
                         }
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Błąd: ${e.message}")
                     }
-                },
-                confirmButton = {
+                }
+            }
+        )
+    }
+
+    if (showCodeDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showCodeDialog = false
+                generatedCode = null
+                expiresAt = null
+            },
+            title = { Text("Generuj kod rejestracyjny") },
+            text = {
+                Column {
                     if (generatedCode == null) {
-                        Button(
-                            onClick = { generateStudentCode() },
-                            enabled = !isGenerating
+                        Text("Wybierz czas ważności kodu:")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded }
                         ) {
-                            if (isGenerating) {
-                                CircularProgressIndicator(
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(24.dp)
+                            OutlinedTextField(
+                                value = when (selectedValidity) {
+                                    "1_HOUR" -> "1 godzina"
+                                    "2_HOURS" -> "2 godziny"
+                                    "1_DAY" -> "1 dzień"
+                                    else -> "1 tydzień"
+                                },
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("1 godzina") },
+                                    onClick = {
+                                        selectedValidity = "1_HOUR"
+                                        expanded = false
+                                    }
                                 )
-                            } else {
-                                Text("Generuj")
+                                DropdownMenuItem(
+                                    text = { Text("2 godziny") },
+                                    onClick = {
+                                        selectedValidity = "2_HOURS"
+                                        expanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("1 dzień") },
+                                    onClick = {
+                                        selectedValidity = "1_DAY"
+                                        expanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("1 tydzień") },
+                                    onClick = {
+                                        selectedValidity = "1_WEEK"
+                                        expanded = false
+                                    }
+                                )
                             }
                         }
                     } else {
-                        Button(
-                            onClick = {
-                                showCodeDialog = false
-                                generatedCode = null
-                                expiresAt = null
-                            }
-                        ) {
-                            Text("Zamknij")
-                        }
-                    }
-                },
-                dismissButton = {
-                    if (generatedCode == null) {
-                        TextButton(
-                            onClick = {
-                                showCodeDialog = false
-                                generatedCode = null
-                                expiresAt = null
-                            }
-                        ) {
-                            Text("Anuluj")
+                        Column {
+                            Text(
+                                text = "Wygenerowany kod:",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Kod: $generatedCode",
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                            Text(
+                                text = "Ważny do: ${formatExpiresAt(expiresAt)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(8.dp)
+                            )
                         }
                     }
                 }
-            )
-        }
-        if (showDeleteConfirmationDialog && selectedUserIdForDeletion != null) {
-            AlertDialog(
-                onDismissRequest = {
-                    showDeleteConfirmationDialog = false
-                    selectedUserIdForDeletion = null
-                    selectedUsernameForDeletion = null
-                },
-                title = { Text("Potwierdzenie usunięcia") },
-                text = { Text("Czy na pewno chcesz usunąć użytkownika '${selectedUsernameForDeletion}'? Operacja jest nieodwracalna.") },
-                confirmButton = {
-                    Button(onClick = {
-                        selectedUserIdForDeletion?.let { userId ->
-                            viewModel.deleteUserFromSystem(
-                                userId = userId,
-                                onSuccess = {
-                                    scope.launch { snackbarHostState.showSnackbar(it) }
-                                    loadUsers()
-                                },
-                                onError = {
-                                    scope.launch { snackbarHostState.showSnackbar("Błąd: $it") }
-                                }
+            },
+            confirmButton = {
+                if (generatedCode == null) {
+                    Button(
+                        onClick = { generateStudentCode() },
+                        enabled = !isGenerating
+                    ) {
+                        if (isGenerating) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
                             )
+                        } else {
+                            Text("Generuj")
                         }
-                        showDeleteConfirmationDialog = false
-                        selectedUserIdForDeletion = null
-                        selectedUsernameForDeletion = null
-                    }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
-                        Text("Tak, usuń")
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        showDeleteConfirmationDialog = false
-                        selectedUserIdForDeletion = null
-                        selectedUsernameForDeletion = null
-                    }) {
+                } else {
+                    Button(
+                        onClick = {
+                            showCodeDialog = false
+                            generatedCode = null
+                            expiresAt = null
+                        }
+                    ) {
+                        Text("Zamknij")
+                    }
+                }
+            },
+            dismissButton = {
+                if (generatedCode == null) {
+                    TextButton(
+                        onClick = {
+                            showCodeDialog = false
+                            generatedCode = null
+                            expiresAt = null
+                        }
+                    ) {
                         Text("Anuluj")
                     }
                 }
-            )
-        }
-
-// Poprawiony DuplicateCourseDialog:
-
-        showDuplicateCourseDialog?.let { (groupId, course) ->
-            DuplicateCourseDialog(
-                originalCourseName = course.courseName,
-                onDismiss = { showDuplicateCourseDialog = null },
-                onDuplicate = { newName, newKey ->
-                    scope.launch {
-                        try {
-                            val request = mapOf("newCourseName" to newName, "newAccessKey" to newKey)
-                            val response = RetrofitClient.getInstance(context).duplicateCourse(
-                                groupId = groupId,
-                                courseId = course.id,
-                                request = request
-                            )
-                            if (response.isSuccessful && response.body()?.success == true) {
-                                snackbarHostState.showSnackbar(response.body()?.message ?: "Kurs zduplikowany")
-                                loadCourseGroups()
-                            } else {
-                                snackbarHostState.showSnackbar(response.body()?.message ?: "Błąd duplikowania")
+            }
+        )
+    }
+    if (showDeleteConfirmationDialog && selectedUserIdForDeletion != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmationDialog = false
+                selectedUserIdForDeletion = null
+                selectedUsernameForDeletion = null
+            },
+            title = { Text("Potwierdzenie usunięcia") },
+            text = { Text("Czy na pewno chcesz usunąć użytkownika '${selectedUsernameForDeletion}'? Operacja jest nieodwracalna.") },
+            confirmButton = {
+                Button(onClick = {
+                    selectedUserIdForDeletion?.let { userId ->
+                        viewModel.deleteUserFromSystem(
+                            userId = userId,
+                            onSuccess = {
+                                scope.launch { snackbarHostState.showSnackbar(it) }
+                                loadUsers()
+                            },
+                            onError = {
+                                scope.launch { snackbarHostState.showSnackbar("Błąd: $it") }
                             }
-                        } catch (e: Exception) {
-                            snackbarHostState.showSnackbar("Błąd: ${e.message}")
-                        } finally {
-                            showDuplicateCourseDialog = null
+                        )
+                    }
+                    showDeleteConfirmationDialog = false
+                    selectedUserIdForDeletion = null
+                    selectedUsernameForDeletion = null
+                }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                    Text("Tak, usuń")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmationDialog = false
+                    selectedUserIdForDeletion = null
+                    selectedUsernameForDeletion = null
+                }) {
+                    Text("Anuluj")
+                }
+            }
+        )
+    }
+
+    showDuplicateCourseDialog?.let { (groupId, course) ->
+        DuplicateCourseDialog(
+            originalCourseName = course.courseName,
+            onDismiss = { showDuplicateCourseDialog = null },
+            onDuplicate = { newName, newKey ->
+                scope.launch {
+                    try {
+                        val request = mapOf("newCourseName" to newName, "newAccessKey" to newKey)
+                        val response = RetrofitClient.getInstance(context).duplicateCourse(
+                            groupId = groupId,
+                            courseId = course.id,
+                            request = request
+                        )
+                        if (response.isSuccessful && response.body()?.success == true) {
+                            snackbarHostState.showSnackbar(response.body()?.message ?: "Kurs zduplikowany")
+                            loadCourseGroups()
+                        } else {
+                            snackbarHostState.showSnackbar(response.body()?.message ?: "Błąd duplikowania")
                         }
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                    } finally {
+                        showDuplicateCourseDialog = null
                     }
                 }
-            )
-        }
+            }
+        )
+    }
 
-// W AlertDialog do usuwania grupy dopiszemy notkę że kursy też będą usuwane (zmień backend w razie potrzeby):
-
-        if (showDeleteGroupDialog != null) {
-            val groupToDelete = showDeleteGroupDialog!!
-            AlertDialog(
-                onDismissRequest = { showDeleteGroupDialog = null },
-                title = { Text("Potwierdź usunięcie") },
-                text = { Text("Czy na pewno chcesz usunąć grupę '${groupToDelete.name}' wraz z wszystkimi kursami w niej zawartymi?") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                try {
-                                    val response = RetrofitClient.getInstance(context).deleteCourseGroup(groupToDelete.id)
-                                    if (response.isSuccessful && response.body()?.success == true) {
-                                        snackbarHostState.showSnackbar(response.body()!!.message)
-                                        loadCourseGroups()
-                                    } else {
-                                        snackbarHostState.showSnackbar(response.body()?.message ?: "Błąd usuwania grupy")
-                                    }
-                                } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar("Błąd: ${e.message}")
-                                } finally {
-                                    showDeleteGroupDialog = null
+    if (showDeleteGroupDialog != null) {
+        val groupToDelete = showDeleteGroupDialog!!
+        AlertDialog(
+            onDismissRequest = { showDeleteGroupDialog = null },
+            title = { Text("Potwierdź usunięcie") },
+            text = { Text("Czy na pewno chcesz usunąć grupę '${groupToDelete.name}' wraz z wszystkimi kursami w niej zawartymi?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                val response = RetrofitClient.getInstance(context).deleteCourseGroup(groupToDelete.id)
+                                if (response.isSuccessful && response.body()?.success == true) {
+                                    snackbarHostState.showSnackbar(response.body()!!.message)
+                                    loadCourseGroups()
+                                } else {
+                                    snackbarHostState.showSnackbar(response.body()?.message ?: "Błąd usuwania grupy")
                                 }
+                            } catch (e: Exception) {
+                                snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                            } finally {
+                                showDeleteGroupDialog = null
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Tak, usuń")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteGroupDialog = null }) { Text("Anuluj") }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Tak, usuń")
                 }
-            )
-        }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteGroupDialog = null }) { Text("Anuluj") }
+            }
+        )
+    }
+}
 
-
-    }}
+// Dodane: Funkcja pomocnicza do tworzenia grupy kursów
