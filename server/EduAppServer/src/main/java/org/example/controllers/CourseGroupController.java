@@ -35,9 +35,20 @@ public class CourseGroupController {
     // Endpoint dla studentów i nauczycieli - pobiera listę wszystkich grup
     @GetMapping
     public ResponseEntity<List<CourseGroup>> getAllCourseGroups() {
-        return ResponseEntity.ok(courseGroupRepository.findAll());
-    }
+        Authentication auth = Utils.getAuthentication();
+        String username = Utils.currentUsername();
 
+        if (Utils.isAdmin(auth)) {
+            // Admin widzi wszystkie grupy
+            return ResponseEntity.ok(courseGroupRepository.findAll());
+        } else if (Utils.isTeacher(auth)) {
+            // Nauczyciel widzi tylko swoje grupy
+            return ResponseEntity.ok(courseGroupRepository.findByTeacherUsername(username));
+        } else {
+            // Student - można zwrócić pustą listę lub grupy publiczne (do dostosowania)
+            return ResponseEntity.ok(courseGroupRepository.findAll());
+        }
+    }
     // =================================================================================
     // =========== NOWY, KLUCZOWY ENDPOINT DO ZAPISU NA KURS PRZEZ STUDENTA =============
     // =================================================================================
