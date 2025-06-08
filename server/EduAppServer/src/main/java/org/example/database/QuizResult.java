@@ -3,6 +3,7 @@ package org.example.database;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "quiz_results")
@@ -28,6 +29,9 @@ public class QuizResult {
     @Column(nullable = false)
     private LocalDateTime completionDate;
 
+    @OneToMany(mappedBy = "quizResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<QuizAnswer> quizAnswers;
+
     // Konstruktory
     public QuizResult() {}
 
@@ -51,4 +55,6 @@ public class QuizResult {
     public void setTotalQuestions(int totalQuestions) { this.totalQuestions = totalQuestions; }
     public LocalDateTime getCompletionDate() { return completionDate; }
     public void setCompletionDate(LocalDateTime completionDate) { this.completionDate = completionDate; }
+    public List<QuizAnswer> getQuizAnswers() { return quizAnswers; }
+    public void setQuizAnswers(List<QuizAnswer> quizAnswers) { this.quizAnswers = quizAnswers; }
 }

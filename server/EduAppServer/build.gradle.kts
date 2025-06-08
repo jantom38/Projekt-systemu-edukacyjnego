@@ -17,6 +17,15 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
+    // Core modules (kernel i layout)
+    implementation("com.itextpdf:kernel:8.0.4")
+    implementation("com.itextpdf:layout:8.0.4")
+
+    // Inne moduły iText (opcjonalne)
+    implementation("com.itextpdf:io:8.0.4")       // do obsługi I/O
+    implementation("com.itextpdf:forms:8.0.4")    // do formularzy PDF
+    implementation("com.itextpdf:pdfa:8.0.4")
+
     // Spring Security - konieczne dla autentykacji i autoryzacji
     implementation("org.springframework.boot:spring-boot-starter-security")
     // Lombok dla logowania

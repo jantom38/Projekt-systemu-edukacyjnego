@@ -3,6 +3,7 @@ package com.example.myapplication
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
@@ -28,6 +30,7 @@ import com.example.myapplication.courses.Course
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.ResponseBody
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -826,6 +829,8 @@ fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
     val scope = rememberCoroutineScope()
     var results by remember { mutableStateOf<List<QuizDetailedResult>>(emptyList()) }
     var quizTitle by remember { mutableStateOf("") }
+    var showDeleteDialog by remember { mutableStateOf<QuizDetailedResult?>(null) }
+    var isDownloading by remember { mutableStateOf(false) }
 
     fun loadQuizResults() {
         scope.launch(Dispatchers.IO) {
@@ -846,55 +851,126 @@ fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
             }
         }
     }
-
-    LaunchedEffect(Unit) {
-        loadQuizResults()
+    fun deleteResult(result: QuizDetailedResult) {
+        scope.launch {
+            try {
+                val response = RetrofitClient.getInstance(context).deleteQuizResult(result.resultId)
+                if (response.isSuccessful) {
+                    snackbarHostState.showSnackbar("Wynik usunięty pomyślnie")
+                    loadQuizResults() // Odśwież listę
+                } else {
+                    snackbarHostState.showSnackbar("Błąd usuwania: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar("Błąd: ${e.message}")
+            } finally {
+                showDeleteDialog = null // Zamknij dialog
+            }
+        }
     }
+    fun downloadPdf() {
+        isDownloading = true
+        scope.launch {
+            try {
+                val response = RetrofitClient.getInstance(context).downloadQuizResultsPdf(quizId)
+                if (response.isSuccessful && response.body() != null) {
+                    val body: ResponseBody = response.body()!!
+                    val success = savePdfToDownloads(context, body, "wyniki_quizu_${quizId}.pdf")
+                    if (success) {
+                        snackbarHostState.showSnackbar("Raport PDF zapisany w Pobranych")
+                    } else {
+                        snackbarHostState.showSnackbar("Błąd zapisu pliku")
+                    }
+                } else {
+                    snackbarHostState.showSnackbar("Błąd pobierania PDF: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar("Błąd: ${e.message}")
+            } finally {
+                isDownloading = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) { loadQuizResults() }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Wyniki quizu: $quizTitle") },
+                title = { Text("Wyniki: $quizTitle") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
+                        Icon(Icons.Default.ArrowBack, "Wstecz")
+                    }
+                },
+                actions = {
+                    if (isDownloading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    } else {
+                        IconButton(onClick = { downloadPdf() }) {
+                            Icon(Icons.Default.Download, contentDescription = "Pobierz PDF")
+                        }
                     }
                 }
             )
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(results) { result ->
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Użytkownik: ${result.username}", style = MaterialTheme.typography.titleMedium)
-                        Text("Wynik: ${result.correctAnswers}/${result.totalQuestions} (${String.format("%.1f%%", result.score)})")
-                        Text("Data: ${result.completionDate}", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Odpowiedzi:", style = MaterialTheme.typography.titleSmall)
-                        result.answers.forEach { answer ->
-                            val isCorrect = answer["isCorrect"] as Boolean
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                "${answer["questionText"]}: ${answer["userAnswer"]} (${if (isCorrect) "Poprawna" else "Niepoprawna"})",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (isCorrect) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                "Użytkownik: ${result.username}",
+                                style = MaterialTheme.typography.titleMedium
                             )
+                            IconButton(onClick = { showDeleteDialog = result }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Usuń wynik",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
+
+
+                            Text("Wynik: ${result.correctAnswers}/${result.totalQuestions} (${String.format("%.1f%%", result.score)})")
+                            Text("Data: ${result.completionDate}", style = MaterialTheme.typography.bodyMedium)
+
+                        // ... reszta informacji o wyniku bez zmian
+
                     }
                 }
             }
         }
+    }
+
+    // Dialog potwierdzający usunięcie
+    if (showDeleteDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            title = { Text("Potwierdź usunięcie") },
+            text = { Text("Czy na pewno chcesz trwale usunąć ten wynik? Ta operacja jest nieodwracalna.") },
+            confirmButton = {
+                Button(
+                    onClick = { deleteResult(showDeleteDialog!!) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Usuń") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) { Text("Anuluj") }
+            }
+        )
     }
 }

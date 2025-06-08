@@ -1,13 +1,20 @@
 package org.example.controllers;
 
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.example.DataBaseRepositories.*;
+import org.example.PdfGenerationService;
 import org.example.database.*;
 import org.example.dto.QuizAnswerDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,18 +29,21 @@ public class QuizResultController {
     private final QuizResultRepository quizResultRepository;
     private final QuizAnswerRepository quizAnswerRepository;
     private final UserRepository userRepository;
+    private final PdfGenerationService pdfGenerationService; // Wstrzyknij serwis
+
 
     @Autowired
     public QuizResultController(QuizRepository quizRepository,
                                 QuizQuestionRepository quizQuestionRepository,
                                 QuizResultRepository quizResultRepository,
                                 QuizAnswerRepository quizAnswerRepository,
-                                UserRepository userRepository) {
+                                UserRepository userRepository, PdfGenerationService pdfGenerationService) {
         this.quizRepository = quizRepository;
         this.quizQuestionRepository = quizQuestionRepository;
         this.quizResultRepository = quizResultRepository;
         this.quizAnswerRepository = quizAnswerRepository;
         this.userRepository = userRepository;
+        this.pdfGenerationService = pdfGenerationService;
     }
 
     private boolean validateMultipleChoice(QuizQuestion question, String answer) {
@@ -211,6 +221,7 @@ public class QuizResultController {
                     List<Map<String, Object>> detailedResults = results.stream().map(result -> {
                         List<QuizAnswer> answers = quizAnswerRepository.findByQuizResultIdWithQuestions(result.getId());
                         Map<String, Object> studentResult = new HashMap<>();
+                        studentResult.put("resultId", result.getId());
                         studentResult.put("userId", result.getUser().getId());
                         studentResult.put("username", result.getUser().getUsername());
                         studentResult.put("correctAnswers", result.getCorrectAnswers());
@@ -246,5 +257,64 @@ public class QuizResultController {
                             "success", false,
                             "message", "Quiz nie znaleziony"));
                 });
+    }
+    @DeleteMapping("/quizzes/results/{resultId}")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+    @Transactional
+    public ResponseEntity<?> deleteQuizResult(@PathVariable Long resultId) {
+        Long currentUserId = Utils.getCurrentUserId(userRepository);
+        log.info("Użytkownik {} próbuje usunąć wynik quizu o ID: {}", currentUserId, resultId);
+
+        return quizResultRepository.findById(resultId)
+                .map(result -> {
+                    // Weryfikacja uprawnień - czy nauczyciel jest właścicielem kursu
+                    String teacherUsername = result.getQuiz().getCourse().getTeacher().getUsername();
+                    if (!Utils.isTeacher(Utils.getAuthentication()) || !teacherUsername.equals(Utils.currentUsername())) {
+                        log.warn("Brak uprawnień do usunięcia wyniku ID: {}", resultId);
+                        return ResponseEntity.status(403).body(Map.of("success", false, "message", "Brak uprawnień"));
+                    }
+
+                    // Najpierw usuń powiązane odpowiedzi, potem wynik
+                    quizAnswerRepository.deleteByQuizResultId(resultId);
+                    quizResultRepository.delete(result);
+
+                    log.info("Wynik quizu ID: {} został pomyślnie usunięty.", resultId);
+                    return ResponseEntity.ok(Map.of("success", true, "message", "Wynik został usunięty."));
+                })
+                .orElseGet(() -> {
+                    log.error("Nie znaleziono wyniku quizu o ID: {}", resultId);
+                    return ResponseEntity.status(404).body(Map.of("success", false, "message", "Wynik nie znaleziony."));
+                });
+    }
+
+    @GetMapping("/quizzes/{quizId}/detailed-results/pdf")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+    public ResponseEntity<InputStreamResource> downloadQuizResultsPdf(@PathVariable Long quizId) {
+        log.info("Generowanie raportu PDF dla quizu ID: {}", quizId);
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz nie znaleziony"));
+
+        // Sprawdzenie uprawnień
+        if (Utils.isTeacher(Utils.getAuthentication()) &&
+                !quiz.getCourse().getTeacher().getUsername().equals(Utils.currentUsername())) {
+            log.warn("Nauczyciel {} próbował pobrać PDF dla quizu ID: {} bez uprawnień", Utils.currentUsername(), quizId);
+            return ResponseEntity.status(403).build();
+        }
+
+        List<QuizResult> results = quizResultRepository.findByQuizId(quizId);
+        // Pobieramy odpowiedzi dla każdego wyniku, aby były dostępne w serwisie PDF
+        results.forEach(result -> result.setQuizAnswers(quizAnswerRepository.findByQuizResultIdWithQuestions(result.getId())));
+
+
+        ByteArrayInputStream bis = pdfGenerationService.generateQuizResultsPdf(quiz, results);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "inline; filename=quiz_results_" + quizId + ".pdf");
+
+        return ResponseEntity
+                .ok()
+                .headers(headers)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new InputStreamResource(bis));
     }
 }

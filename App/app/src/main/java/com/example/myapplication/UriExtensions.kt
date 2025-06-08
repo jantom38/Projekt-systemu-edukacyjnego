@@ -5,6 +5,13 @@ import android.net.Uri
 import java.io.File
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
+import okhttp3.ResponseBody
+import android.content.ContentValues
+import android.os.Build
+import android.provider.MediaStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.OutputStream
 
 fun Uri.toFile(context: Context): File {
     val contentResolver = context.contentResolver
@@ -39,4 +46,33 @@ fun String.extensionFromMimeType(): String {
     val ext = MimeTypeMap.getSingleton()
         .getExtensionFromMimeType(this)
     return if (ext != null) ".$ext" else ""
+}
+
+suspend fun savePdfToDownloads(context: Context, body: ResponseBody, fileName: String): Boolean {
+    return withContext(Dispatchers.IO) {
+        try {
+            val resolver = context.contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/")
+                }
+            }
+
+            val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+            uri?.let {
+                val outputStream: OutputStream? = resolver.openOutputStream(it)
+                outputStream?.use { stream ->
+                    body.byteStream().use { input ->
+                        input.copyTo(stream)
+                    }
+                }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
 }

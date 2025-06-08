@@ -148,7 +148,7 @@ fun EduApp() {
             SolveQuizScreen(navController, quizId, courseId)
         }
         composable(
-            "quiz_result/{quizId}/{courseId}", // Dodajemy courseId do trasy
+            "quiz_result/{quizId}/{courseId}",
             arguments = listOf(
                 navArgument("quizId") { type = NavType.LongType },
                 navArgument("courseId") { type = NavType.LongType }

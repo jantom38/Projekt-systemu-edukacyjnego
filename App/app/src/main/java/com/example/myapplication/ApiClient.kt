@@ -118,6 +118,7 @@ data class QuizStat(
 
 data class QuizDetailedResult(
     val userId: Long,
+    val resultId: Long,
     val username: String,
     val correctAnswers: Int,
     val totalQuestions: Int,
@@ -178,6 +179,12 @@ interface CourseApiService {
     ): Response<GenericResponse>
     @DELETE("/api/course-groups/{groupId}")
     suspend fun deleteCourseGroup(@Path("groupId") groupId: Long): Response<GenericResponse>
+    @DELETE("api/courses/quizzes/results/{resultId}")
+    suspend fun deleteQuizResult(@Path("resultId") resultId: Long): Response<Map<String, Any>>
+
+    @Streaming // Ważne dla pobierania dużych plików
+    @GET("api/courses/quizzes/{quizId}/detailed-results/pdf")
+    suspend fun downloadQuizResultsPdf(@Path("quizId") quizId: Long): Response<ResponseBody>
 
     @POST("/api/course-groups")
     suspend fun createCourseGroup(@Body request: Map<String, String>): Response<CourseGroup>
