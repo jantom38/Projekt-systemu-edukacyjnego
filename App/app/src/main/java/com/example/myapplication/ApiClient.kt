@@ -189,7 +189,7 @@ interface CourseApiService {
     @POST("/api/course-groups")
     suspend fun createCourseGroup(@Body request: Map<String, String>): Response<CourseGroup>
 
-    @POST("/api/course-groups/{groupId}/courses/{courseId}/duplicate")
+    @POST("/api/course-groups/course-groups/{groupId}/courses/{courseId}/duplicate")
     suspend fun duplicateCourse(
         @Path("groupId") groupId: Long,
         @Path("courseId") courseId: Long,

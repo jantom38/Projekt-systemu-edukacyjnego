@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -25,16 +26,18 @@ public class CourseGroupController {
     private final UserCourseRepository userCourseRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizRepository quizRepository;
+    private final CourseFileRepository courseFileRepository;
 
 
     @Autowired
-    public CourseGroupController(CourseGroupRepository courseGroupRepository, CourseRepository courseRepository, UserRepository userRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, QuizRepository quizRepository) {
+    public CourseGroupController(CourseGroupRepository courseGroupRepository, CourseRepository courseRepository, UserRepository userRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, QuizRepository quizRepository, CourseFileRepository courseFileRepository) {
         this.courseGroupRepository = courseGroupRepository;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
         this.userCourseRepository = userCourseRepository;
         this.quizQuestionRepository = quizQuestionRepository;
         this.quizRepository = quizRepository;
+        this.courseFileRepository = courseFileRepository;
     }
 
     // Endpoint dla studentów i nauczycieli - pobiera listę wszystkich grup
@@ -109,83 +112,68 @@ public class CourseGroupController {
     @PostMapping("/course-groups/{groupId}/courses/{courseId}/duplicate")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     @Transactional
-    public ResponseEntity<?> duplicateCourse(
-            @PathVariable Long groupId,
-            @PathVariable Long courseId,
-            @RequestBody Map<String, String> request
-    ) {
-        log.info("Próba duplikowania kursu ID: {} do grupy ID: {} przez użytkownika {}", courseId, groupId, Utils.currentUsername());
-
+    public ResponseEntity<?> duplicateCourse(@PathVariable Long groupId,
+                                             @PathVariable Long courseId,
+                                             @RequestBody Map<String, String> request) {
         String newCourseName = request.get("newCourseName");
         String newAccessKey = request.get("newAccessKey");
 
-        if (newCourseName == null || newCourseName.isBlank() || newAccessKey == null || newAccessKey.isBlank()) {
-            log.warn("Próba duplikowania kursu ID: {} z pustą nazwą lub kluczem dostępu", courseId);
-            return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", "Nowa nazwa kursu i klucz dostępu są wymagane"));
+        // 1. Walidacja i pobranie danych
+        Course originalCourse = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Oryginalny kurs o ID: " + courseId + " nie istnieje."));
+        CourseGroup group = courseGroupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Grupa kursów o ID: " + groupId + " nie istnieje."));
+
+        // 2. Stworzenie nowej encji kursu
+        Course newCourse = new Course();
+        newCourse.setCourseName(newCourseName);
+        newCourse.setAccessKey(newAccessKey);
+        newCourse.setDescription(originalCourse.getDescription());
+        newCourse.setTeacher(originalCourse.getTeacher());
+        newCourse.setCourseGroup(group);
+        Course savedNewCourse = courseRepository.save(newCourse);
+        log.info("Utworzono nowy kurs '{}' (ID: {}) na podstawie kursu ID: {}", newCourse.getCourseName(), savedNewCourse.getId(), originalCourse.getId());
+
+        // 3. Głębokie kopiowanie quizów
+        List<Quiz> originalQuizzes = quizRepository.findByCourseId(originalCourse.getId());
+        for (Quiz originalQuiz : originalQuizzes) {
+            Quiz newQuiz = new Quiz();
+            newQuiz.setTitle(originalQuiz.getTitle());
+            newQuiz.setDescription(originalQuiz.getDescription());
+            newQuiz.setCourse(savedNewCourse);
+            newQuiz.setNumberOfQuestionsToDisplay(originalQuiz.getNumberOfQuestionsToDisplay());
+
+            // Kopiowanie pytań dla każdego quizu
+            List<QuizQuestion> newQuestions = originalQuiz.getQuestions().stream().map(originalQuestion -> {
+                QuizQuestion newQuestion = new QuizQuestion();
+                newQuestion.setQuestionText(originalQuestion.getQuestionText());
+                newQuestion.setQuestionType(originalQuestion.getQuestionType());
+                newQuestion.setOptions(originalQuestion.getOptions());
+                newQuestion.setCorrectAnswer(originalQuestion.getCorrectAnswer());
+                newQuestion.setQuiz(newQuiz); // Powiązanie z nowym quizem
+                return newQuestion;
+            }).collect(Collectors.toList());
+
+            newQuiz.setQuestions(newQuestions);
+            quizRepository.save(newQuiz);
         }
+        log.info("Skopiowano {} quizów dla nowego kursu ID: {}", originalQuizzes.size(), savedNewCourse.getId());
 
-        return courseRepository.findById(courseId)
-                .map(originalCourse -> {
-                    Authentication auth = Utils.getAuthentication();
-                    if (Utils.isTeacher(auth) && !originalCourse.getTeacher().getUsername().equals(Utils.currentUsername())) {
-                        log.warn("Nauczyciel {} próbował duplikować kurs ID: {} bez uprawnień", Utils.currentUsername(), courseId);
-                        return ResponseEntity.status(403)
-                                .body(Map.of("success", false, "message", "Brak dostępu do tego kursu"));
-                    }
+        // 4. Utworzenie nowych powiązań do istniejących plików (współdzielenie)
+        List<CourseFile> originalFiles = courseFileRepository.findByCourseId(originalCourse.getId());
+        for (CourseFile originalFile : originalFiles) {
+            CourseFile newFileLink = new CourseFile();
+            newFileLink.setFileName(originalFile.getFileName());   // Użyj tej samej nazwy
+            newFileLink.setFileUrl(originalFile.getFileUrl());     // Użyj tego samego URL
+            newFileLink.setCourse(savedNewCourse);                 // Przypisz do nowego kursu
+            courseFileRepository.save(newFileLink);
+        }
+        log.info("Utworzono {} powiązań do istniejących plików dla nowego kursu ID: {}", originalFiles.size(), savedNewCourse.getId());
 
-                    CourseGroup courseGroup = courseGroupRepository.findById(groupId)
-                            .orElseThrow(() -> new RuntimeException("Grupa kursów o podanym ID nie istnieje"));
-
-                    // Create new course
-                    Course newCourse = new Course();
-                    newCourse.setCourseName(newCourseName);
-                    newCourse.setDescription(originalCourse.getDescription());
-                    newCourse.setAccessKey(newAccessKey);
-                    newCourse.setTeacher(originalCourse.getTeacher());
-                    newCourse.setCourseGroup(courseGroup);
-
-                    Course savedCourse = courseRepository.save(newCourse);
-                    log.info("Nowy kurs '{}' (ID: {}) utworzony", newCourseName, savedCourse.getId());
-
-                    // Copy quizzes
-                    List<Quiz> originalQuizzes = quizRepository.findByCourseId(courseId);
-                    for (Quiz originalQuiz : originalQuizzes) {
-                        Quiz newQuiz = new Quiz();
-                        newQuiz.setTitle(originalQuiz.getTitle());
-                        newQuiz.setDescription(originalQuiz.getDescription());
-                        newQuiz.setCourse(savedCourse);
-                        newQuiz.setNumberOfQuestionsToDisplay(originalQuiz.getNumberOfQuestionsToDisplay());
-
-                        Quiz savedQuiz = quizRepository.save(newQuiz);
-                        log.info("Quiz '{}' (ID: {}) skopiowany do kursu ID: {}", savedQuiz.getTitle(), savedQuiz.getId(), savedCourse.getId());
-
-                        // Copy quiz questions
-                        List<QuizQuestion> originalQuestions = quizQuestionRepository.findByQuizId(originalQuiz.getId());
-                        for (QuizQuestion originalQuestion : originalQuestions) {
-                            QuizQuestion newQuestion = new QuizQuestion();
-                            newQuestion.setQuiz(savedQuiz);
-                            newQuestion.setQuestionText(originalQuestion.getQuestionText());
-                            newQuestion.setQuestionType(originalQuestion.getQuestionType());
-                            newQuestion.setOptions(originalQuestion.getOptions());
-                            newQuestion.setCorrectAnswer(originalQuestion.getCorrectAnswer());
-
-                            quizQuestionRepository.save(newQuestion);
-                            log.info("Pytanie '{}' (ID: {}) skopiowane do quizu ID: {}", newQuestion.getQuestionText(), newQuestion.getId(), savedQuiz.getId());
-                        }
-                    }
-
-                    return ResponseEntity.ok(Map.of(
-                            "success", true,
-                            "message", "Kurs i powiązane quizy zostały zduplikowane pomyślnie",
-                            "course", savedCourse
-                    ));
-                })
-                .orElseGet(() -> {
-                    log.error("Kurs ID: {} nie znaleziony", courseId);
-                    return ResponseEntity.status(404)
-                            .body(Map.of("success", false, "message", "Kurs nie znaleziony"));
-                });
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Kurs, quizy i pliki zostały pomyślnie zduplikowane."
+        ));
     }
     @DeleteMapping("/{groupId}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")

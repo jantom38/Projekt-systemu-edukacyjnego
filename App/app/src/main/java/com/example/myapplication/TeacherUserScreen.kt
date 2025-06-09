@@ -51,15 +51,14 @@ fun TeacherScreen(navController: NavHostController) {
     var showCreateGroupDialog by remember { mutableStateOf(false) }
     var showDuplicateCourseDialog by remember { mutableStateOf<Pair<Long, Course>?>(null) }
 
-    // --- PRZYWRÓCONE ELEMENTY: Stany dla generowania kodu rejestracyjnego ---
+    // Stany dla generowania kodu rejestracyjnego
     var showCodeDialog by remember { mutableStateOf(false) }
     var selectedValidity by remember { mutableStateOf("1_WEEK") }
     var expanded by remember { mutableStateOf(false) }
     var generatedCode by remember { mutableStateOf<String?>(null) }
     var expiresAt by remember { mutableStateOf<String?>(null) }
     var isGenerating by remember { mutableStateOf(false) }
-    var showDeleteGroupDialog by remember { mutableStateOf<CourseGroup?>(null) } // NOWY STAN
-
+    var showDeleteGroupDialog by remember { mutableStateOf<CourseGroup?>(null) }
 
     fun loadCourseGroups() {
         scope.launch {
@@ -80,7 +79,6 @@ fun TeacherScreen(navController: NavHostController) {
         }
     }
 
-    // --- PRZYWRÓCONE ELEMENTY: Funkcje pomocnicze do generowania kodu ---
     fun formatExpiresAt(isoDateTime: String?): String {
         if (isoDateTime == null) return "Nieznana data"
         return try {
@@ -121,7 +119,6 @@ fun TeacherScreen(navController: NavHostController) {
         }
     }
 
-
     LaunchedEffect(Unit, navController.currentBackStackEntry) {
         loadCourseGroups()
     }
@@ -131,7 +128,6 @@ fun TeacherScreen(navController: NavHostController) {
         topBar = {
             TopAppBar(
                 title = { Text("Zarządzanie Kursami") },
-                // --- PRZYWRÓCONE ELEMENTY: Przycisk w TopAppBar ---
                 actions = {
                     TextButton(onClick = { showCodeDialog = true }) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -196,6 +192,7 @@ fun TeacherScreen(navController: NavHostController) {
             }
         }
     }
+
     if (showDeleteGroupDialog != null) {
         val groupToDelete = showDeleteGroupDialog!!
         AlertDialog(
@@ -211,7 +208,7 @@ fun TeacherScreen(navController: NavHostController) {
                                 val response = api.deleteCourseGroup(groupToDelete.id)
                                 if (response.isSuccessful && response.body()?.success == true) {
                                     snackbarHostState.showSnackbar(response.body()!!.message)
-                                    loadCourseGroups() // Odśwież listę
+                                    loadCourseGroups()
                                 } else {
                                     snackbarHostState.showSnackbar(response.body()?.message ?: "Błąd usuwania grupy")
                                 }
@@ -232,7 +229,7 @@ fun TeacherScreen(navController: NavHostController) {
             }
         )
     }
-    // --- PRZYWRÓCONE ELEMENTY: Okno dialogowe do generowania kodu ---
+
     if (showCodeDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -360,7 +357,6 @@ fun TeacherScreen(navController: NavHostController) {
         )
     }
 
-
     if (showCreateGroupDialog) {
         CreateCourseGroupDialog(
             onDismiss = { showCreateGroupDialog = false },
@@ -392,11 +388,19 @@ fun TeacherScreen(navController: NavHostController) {
                     try {
                         val api = RetrofitClient.getInstance(context)
                         val response = api.duplicateCourse(groupId, course.id, mapOf("newCourseName" to newName, "newAccessKey" to newAccessKey))
-                        if (response.isSuccessful && response.body()?.success == true) {
-                            snackbarHostState.showSnackbar(response.body()?.message ?: "Kurs zduplikowany")
-                            loadCourseGroups()
+                        if (response.isSuccessful) {
+                            val responseBody = response.body() as? Map<String, Any>
+                            val success = responseBody?.get("success") as? Boolean ?: false
+                            val message = responseBody?.get("message") as? String ?: "wykonano"
+                            if (success) {
+                                snackbarHostState.showSnackbar(message)
+                                loadCourseGroups()
+                            } else {
+                                snackbarHostState.showSnackbar(message)
+                                loadCourseGroups()
+                            }
                         } else {
-                            snackbarHostState.showSnackbar(response.body()?.message ?: "Błąd duplikowania")
+                            snackbarHostState.showSnackbar("Błąd duplikowania: ${response.code()}")
                         }
                     } catch (e: Exception) {
                         snackbarHostState.showSnackbar("Błąd: ${e.message}")
@@ -408,6 +412,7 @@ fun TeacherScreen(navController: NavHostController) {
         )
     }
 }
+
 @Composable
 fun CourseGroupCard(
     group: CourseGroup,
@@ -415,8 +420,7 @@ fun CourseGroupCard(
     onAddCourseClick: () -> Unit,
     onDuplicateCourseClick: (Course) -> Unit,
     onDeleteCourseClick: (Course) -> Unit,
-    onDeleteGroupClick: () -> Unit // NOWY PARAMETR
-
+    onDeleteGroupClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
@@ -426,7 +430,6 @@ fun CourseGroupCard(
                 supportingContent = { group.description?.let { Text(it) } },
                 trailingContent = {
                     Row {
-                        // NOWY PRZYCISK
                         IconButton(onClick = onDeleteGroupClick) {
                             Icon(Icons.Default.DeleteForever, "Usuń grupę", tint = MaterialTheme.colorScheme.error)
                         }
@@ -469,18 +472,21 @@ fun CourseItemRow(
 ) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(course.courseName, Modifier
-            .weight(1f)
-            .clickable(onClick = onDetailsClick))
+        Text(
+            text = course.courseName,
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onDetailsClick)
+        )
         Row {
-           // IconButton(onClick = onDuplicateClick, modifier = Modifier.size(40.dp)) {
-           //     Icon(Icons.Default.ContentCopy, "Duplikuj", tint = MaterialTheme.colorScheme.secondary)
-           // }
+            IconButton(onClick = onDuplicateClick, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.ContentCopy, "Duplikuj", tint = MaterialTheme.colorScheme.secondary)
+            }
             IconButton(onClick = onDeleteClick, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.Delete, "Usuń", tint = MaterialTheme.colorScheme.error)
             }
@@ -527,9 +533,6 @@ fun DuplicateCourseDialog(originalCourseName: String, onDismiss: () -> Unit, onD
         dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
     )
 }
-
-
-
 
 // -------------------- USER SCREEN --------------------
 @Composable
