@@ -478,9 +478,9 @@ fun CourseItemRow(
             .weight(1f)
             .clickable(onClick = onDetailsClick))
         Row {
-            IconButton(onClick = onDuplicateClick, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.ContentCopy, "Duplikuj", tint = MaterialTheme.colorScheme.secondary)
-            }
+           // IconButton(onClick = onDuplicateClick, modifier = Modifier.size(40.dp)) {
+           //     Icon(Icons.Default.ContentCopy, "Duplikuj", tint = MaterialTheme.colorScheme.secondary)
+           // }
             IconButton(onClick = onDeleteClick, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.Delete, "Usuń", tint = MaterialTheme.colorScheme.error)
             }
@@ -867,7 +867,8 @@ fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
                 showDeleteDialog = null // Zamknij dialog
             }
         }
-    }
+    }// W TeacherQuizResultsScreen.kt, wewnątrz funkcji downloadPdf()
+
     fun downloadPdf() {
         isDownloading = true
         scope.launch {
@@ -875,17 +876,21 @@ fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
                 val response = RetrofitClient.getInstance(context).downloadQuizResultsPdf(quizId)
                 if (response.isSuccessful && response.body() != null) {
                     val body: ResponseBody = response.body()!!
-                    val success = savePdfToDownloads(context, body, "wyniki_quizu_${quizId}.pdf")
-                    if (success) {
+                    // Odbieramy parę: (sukces, wiadomość o błędzie)
+                    val (isSuccess, errorMessage) = savePdfToDownloads(context, body, "wyniki_quizu_${quizId}.pdf")
+
+                    if (isSuccess) {
                         snackbarHostState.showSnackbar("Raport PDF zapisany w Pobranych")
                     } else {
-                        snackbarHostState.showSnackbar("Błąd zapisu pliku")
+                        // Wyświetlamy konkretny błąd w Snackbarze
+                        snackbarHostState.showSnackbar("Błąd zapisu pliku: $errorMessage")
                     }
                 } else {
                     snackbarHostState.showSnackbar("Błąd pobierania PDF: ${response.code()}")
                 }
             } catch (e: Exception) {
-                snackbarHostState.showSnackbar("Błąd: ${e.message}")
+                // Tutaj też możemy wyświetlić konkretny błąd sieci
+                snackbarHostState.showSnackbar("Błąd sieci: ${e.message ?: "Nieznany błąd"}")
             } finally {
                 isDownloading = false
             }

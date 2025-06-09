@@ -8,6 +8,7 @@ import android.webkit.MimeTypeMap
 import okhttp3.ResponseBody
 import android.content.ContentValues
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -48,31 +49,41 @@ fun String.extensionFromMimeType(): String {
     return if (ext != null) ".$ext" else ""
 }
 
-suspend fun savePdfToDownloads(context: Context, body: ResponseBody, fileName: String): Boolean {
+suspend fun savePdfToDownloads(context: Context, body: ResponseBody, fileName: String): Pair<Boolean, String?> {
     return withContext(Dispatchers.IO) {
         try {
             val resolver = context.contentResolver
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
                 put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                } else {
+                    val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
+                    if (!downloadsDir.exists()) {
+                        downloadsDir.mkdirs()
+                    }
+                    val file = File(downloadsDir, fileName)
+                    put(MediaStore.MediaColumns.DATA, file.absolutePath)
                 }
             }
 
             val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
-            uri?.let {
-                val outputStream: OutputStream? = resolver.openOutputStream(it)
-                outputStream?.use { stream ->
-                    body.byteStream().use { input ->
-                        input.copyTo(stream)
-                    }
+                ?: return@withContext Pair(false, "Nie udało się utworzyć wpisu w MediaStore.")
+
+            resolver.openOutputStream(uri)?.use { outputStream ->
+                body.byteStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
                 }
-            }
-            true
+            } ?: return@withContext Pair(false, "Nie udało się otworzyć strumienia do zapisu.")
+
+            Pair(true, null)
+
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            Pair(false, e.message ?: "Wystąpił nieznany błąd zapisu.")
         }
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.RegisterRequest
@@ -57,6 +58,7 @@ fun LoginScreen(navController: NavHostController) {
             onValueChange = { password = it },
             label = { Text("Hasło") },
             singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -152,6 +154,7 @@ fun RegisterScreen(navController: NavHostController) {
             onValueChange = { password = it },
             label = { Text("Hasło") },
             singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
 
