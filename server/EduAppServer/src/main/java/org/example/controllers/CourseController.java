@@ -197,7 +197,7 @@ public class CourseController {
                 .orElse(ResponseEntity.status(404)
                         .body(Map.of("success", false, "message", "Plik nie znaleziony dla tego kursu")));
     }
-    @PreAuthorize("hasRole('student')")
+    @PreAuthorize("hasRole('STUDENT')")
 
     @GetMapping("/my-courses")
     public ResponseEntity<?> getUserCourses() {

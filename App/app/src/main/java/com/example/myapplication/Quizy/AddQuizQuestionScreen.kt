@@ -313,7 +313,7 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                         onSuccess = {
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar("Pytanie dodane pomyślnie")
-                                navController.popBackStack()
+                                navController.navigate("edit_quiz/${quizId}")
                             }
                         },
                         onError = { error ->
