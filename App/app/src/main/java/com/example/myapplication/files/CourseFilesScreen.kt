@@ -393,7 +393,7 @@ fun FileCard(file: CourseFile, context: Context) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = file.fileName)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = fullUrl)
+
         }
     }
 }
