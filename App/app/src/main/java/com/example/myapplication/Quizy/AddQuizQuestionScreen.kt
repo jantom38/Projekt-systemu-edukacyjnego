@@ -23,9 +23,29 @@ import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
+/**
+ * @file AddQuizQuestionScreen.kt
+ *  This file contains the composable function for adding new quiz questions and its associated ViewModel.
+ */
+
+/**
+ *  ViewModel for the AddQuizQuestionScreen.
+ *
+ * This ViewModel handles the logic for creating new quiz questions by interacting with the API.
+ *
+ * @param context The application context.
+ * @param quizId The ID of the quiz to which the question will be added.
+ */
 class AddQuizQuestionViewModel(context: Context, private val quizId: Long) : ViewModel() {
     private val apiService = RetrofitClient.getInstance(context)
 
+    /**
+     *  Creates a new quiz question.
+     *
+     * @param question The [QuizQuestion] object to be created.
+     * @param onSuccess Callback to be invoked when the question is successfully created.
+     * @param onError Callback to be invoked when an error occurs during question creation, providing an error message.
+     */
     fun createQuestion(question: QuizQuestion, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -57,6 +77,16 @@ class AddQuizQuestionViewModel(context: Context, private val quizId: Long) : Vie
     }
 }
 
+/**
+ *  Composable function for the Add Quiz Question Screen.
+ *
+ * This screen allows users to add new questions to a specified quiz.
+ * Users can input the question text, select the question type (multiple choice, true/false, open-ended),
+ * define options (for multiple choice and true/false), and specify the correct answer(s).
+ *
+ * @param navController The NavHostController for navigating between screens.
+ * @param quizId The ID of the quiz to which the question will be added.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {

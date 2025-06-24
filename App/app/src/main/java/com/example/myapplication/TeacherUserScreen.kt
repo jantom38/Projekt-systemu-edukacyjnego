@@ -1,14 +1,20 @@
+/**
+ * @file TeacherUserScreen.kt
+ *  Plik zawierający komponenty interfejsu użytkownika dla ekranów nauczyciela i studenta w aplikacji mobilnej.
+ *
+ * Zawiera definicje ekranów takich jak TeacherScreen, UserScreen, AddCourseScreen, CourseListScreen,
+ * TeacherQuizStatsScreen oraz TeacherQuizResultsScreen, które obsługują zarządzanie grupami kursów,
+ * kursami, quizami oraz ich statystykami i wynikami.
+ */
 package com.example.myapplication
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
@@ -17,7 +23,6 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,8 +41,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
-// -------------------- TEACHER SCREEN --------------------
-
+/**
+ *  Ekran główny dla nauczyciela, umożliwiający zarządzanie grupami kursów.
+ * @param navController Kontroler nawigacji do przechodzenia między ekranami.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TeacherScreen(navController: NavHostController) {
@@ -60,6 +67,9 @@ fun TeacherScreen(navController: NavHostController) {
     var isGenerating by remember { mutableStateOf(false) }
     var showDeleteGroupDialog by remember { mutableStateOf<CourseGroup?>(null) }
 
+    /**
+     *  Ładuje grupy kursów z serwera.
+     */
     fun loadCourseGroups() {
         scope.launch {
             isLoading = true
@@ -79,6 +89,11 @@ fun TeacherScreen(navController: NavHostController) {
         }
     }
 
+    /**
+     *  Formatuje datę wygaśnięcia kodu w formacie polskim.
+     * @param isoDateTime Data w formacie ISO.
+     * @return Sformatowana data w formacie "d MMMM yyyy, HH:mm" lub oryginalna wartość, jeśli parsowanie się nie powiedzie.
+     */
     fun formatExpiresAt(isoDateTime: String?): String {
         if (isoDateTime == null) return "Nieznana data"
         return try {
@@ -92,6 +107,9 @@ fun TeacherScreen(navController: NavHostController) {
         }
     }
 
+    /**
+     *  Generuje kod rejestracyjny dla studentów.
+     */
     fun generateStudentCode() {
         isGenerating = true
         scope.launch(Dispatchers.IO) {
@@ -397,7 +415,6 @@ fun TeacherScreen(navController: NavHostController) {
                                 loadCourseGroups()
                             } else {
                                 snackbarHostState.showSnackbar(message)
-                                loadCourseGroups()
                             }
                         } else {
                             snackbarHostState.showSnackbar("Błąd duplikowania: ${response.code()}")
@@ -413,14 +430,23 @@ fun TeacherScreen(navController: NavHostController) {
     }
 }
 
+/**
+ *  Komponent wyświetlający kartę grupy kursów.
+ * @param group Obiekt grupy kursów.
+ * @param navController Kontroler nawigacji.
+ * @param onAddCourseClick Funkcja wywoływana przy dodawaniu nowego kursu.
+ * @param onDuplicateCourseClick Funkcja wywoływana przy duplikowaniu kursu.
+ * @param onDeleteGroupClick Funkcja wywoływana przy usuwaniu grupy.
+ * @param onDeleteCourseClick Funkcja wywoływana przy usuwaniu kursu.
+ */
 @Composable
 fun CourseGroupCard(
     group: CourseGroup,
     navController: NavHostController,
     onAddCourseClick: () -> Unit,
     onDuplicateCourseClick: (Course) -> Unit,
-    onDeleteCourseClick: (Course) -> Unit,
-    onDeleteGroupClick: () -> Unit
+    onDeleteGroupClick: () -> Unit,
+    onDeleteCourseClick: (Course) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
@@ -463,6 +489,13 @@ fun CourseGroupCard(
     }
 }
 
+/**
+ *  Komponent wyświetlający wiersz kursu w karcie grupy.
+ * @param course Obiekt kursu.
+ * @param onDetailsClick Funkcja wywoływana przy kliknięciu w szczegóły kursu.
+ * @param onDuplicateClick Funkcja wywoływana przy duplikowaniu kursu.
+ * @param onDeleteClick Funkcja wywoływana przy usuwaniu kursu.
+ */
 @Composable
 fun CourseItemRow(
     course: Course,
@@ -494,6 +527,11 @@ fun CourseItemRow(
     }
 }
 
+/**
+ *  Dialog do tworzenia nowej grupy kursów.
+ * @param onDismiss Funkcja wywoływana przy zamknięciu dialogu.
+ * @param onCreate Funkcja wywoływana przy tworzeniu grupy z nazwą i opisem.
+ */
 @Composable
 fun CreateCourseGroupDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
@@ -514,6 +552,12 @@ fun CreateCourseGroupDialog(onDismiss: () -> Unit, onCreate: (String, String) ->
     )
 }
 
+/**
+ *  Dialog do duplikowania kursu.
+ * @param originalCourseName Oryginalna nazwa kursu.
+ * @param onDismiss Funkcja wywoływana przy zamknięciu dialogu.
+ * @param onDuplicate Funkcja wywoływana przy duplikowaniu kursu z nową nazwą i kluczem dostępu.
+ */
 @Composable
 fun DuplicateCourseDialog(originalCourseName: String, onDismiss: () -> Unit, onDuplicate: (String, String) -> Unit) {
     var newName by remember { mutableStateOf("$originalCourseName - Kopia") }
@@ -534,14 +578,16 @@ fun DuplicateCourseDialog(originalCourseName: String, onDismiss: () -> Unit, onD
     )
 }
 
-// -------------------- USER SCREEN --------------------
+/**
+ *  Ekran dla studenta, wyświetlający dostępne grupy kursów.
+ * @param navController Kontroler nawigacji do przechodzenia między ekranami.
+ */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun UserScreen(navController: NavHostController) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    // ZMIANA: Przechowujemy teraz listę CourseGroup
     var courseGroups by remember { mutableStateOf<List<CourseGroup>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -550,7 +596,6 @@ fun UserScreen(navController: NavHostController) {
             isLoading = true
             try {
                 val api = RetrofitClient.getInstance(context)
-                // ZMIANA: Wywołujemy nowy endpoint
                 val response = api.getCourseGroups()
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
@@ -586,7 +631,6 @@ fun UserScreen(navController: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(courseGroups) { group ->
-                    // Karta dla CourseGroup
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -608,7 +652,12 @@ fun UserScreen(navController: NavHostController) {
         }
     }
 }
-// -------------------- ADD COURSE SCREEN --------------------
+
+/**
+ *  Ekran do dodawania nowego kursu do grupy.
+ * @param navController Kontroler nawigacji.
+ * @param courseGroupId ID grupy kursów, do której dodawany jest kurs.
+ */
 @Composable
 fun AddCourseScreen(navController: NavHostController, courseGroupId: Long) {
     val context = LocalContext.current
@@ -700,7 +749,14 @@ fun AddCourseScreen(navController: NavHostController, courseGroupId: Long) {
     }
 }
 
-// -------------------- COURSE LIST SCREEN dla roli teacher --------------------
+/**
+ *  Ekran wyświetlający listę kursów dla nauczyciela.
+ * @param navController Kontroler nawigacji.
+ * @param courses Lista kursów do wyświetlenia.
+ * @param onCourseClick Funkcja wywoływana przy kliknięciu w kurs.
+ * @param onDeleteCourseClick Funkcja wywoływana przy usuwaniu kursu (opcjonalna).
+ * @param onViewStatsClick Funkcja wywoływana przy przeglądaniu statystyk (opcjonalna).
+ */
 @Composable
 fun CourseListScreen(
     navController: NavHostController,
@@ -727,12 +783,11 @@ fun CourseListScreen(
                         Spacer(Modifier.height(4.dp))
                         Text(it, style = MaterialTheme.typography.bodyMedium)
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-
                         if (onDeleteCourseClick != null) {
                             Button(
                                 onClick = { onDeleteCourseClick(course) },
@@ -750,8 +805,11 @@ fun CourseListScreen(
     }
 }
 
-
-// -------------------- }
+/**
+ *  Ekran wyświetlający statystyki quizów dla kursu.
+ * @param navController Kontroler nawigacji.
+ * @param courseId ID kursu.
+ */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun TeacherQuizStatsScreen(navController: NavHostController, courseId: Long) {
@@ -760,6 +818,9 @@ fun TeacherQuizStatsScreen(navController: NavHostController, courseId: Long) {
     val scope = rememberCoroutineScope()
     var quizStats by remember { mutableStateOf<List<QuizStat>>(emptyList()) }
 
+    /**
+     *  Ładuje statystyki quizów z serwera.
+     */
     fun loadQuizStats() {
         scope.launch(Dispatchers.IO) {
             try {
@@ -823,7 +884,11 @@ fun TeacherQuizStatsScreen(navController: NavHostController, courseId: Long) {
     }
 }
 
-// Teacher Quiz Detailed Results Screen
+/**
+ *  Ekran wyświetlający szczegółowe wyniki quizu dla nauczyciela.
+ * @param navController Kontroler nawigacji.
+ * @param quizId ID quizu.
+ */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
@@ -835,6 +900,9 @@ fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
     var showDeleteDialog by remember { mutableStateOf<QuizDetailedResult?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
 
+    /**
+     *  Ładuje wyniki quizów z serwera.
+     */
     fun loadQuizResults() {
         scope.launch(Dispatchers.IO) {
             try {
@@ -854,24 +922,32 @@ fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
             }
         }
     }
+
+    /**
+     *  Usuwa wynik quizu.
+     * @param result Obiekt wyniku quizu do usunięcia.
+     */
     fun deleteResult(result: QuizDetailedResult) {
         scope.launch {
             try {
                 val response = RetrofitClient.getInstance(context).deleteQuizResult(result.resultId)
                 if (response.isSuccessful) {
                     snackbarHostState.showSnackbar("Wynik usunięty pomyślnie")
-                    loadQuizResults() // Odśwież listę
+                    loadQuizResults()
                 } else {
                     snackbarHostState.showSnackbar("Błąd usuwania: ${response.code()}")
                 }
             } catch (e: Exception) {
                 snackbarHostState.showSnackbar("Błąd: ${e.message}")
             } finally {
-                showDeleteDialog = null // Zamknij dialog
+                showDeleteDialog = null
             }
         }
-    }// W TeacherQuizResultsScreen.kt, wewnątrz funkcji downloadPdf()
+    }
 
+    /**
+     *  Pobiera raport wyników quizu w formacie PDF.
+     */
     fun downloadPdf() {
         isDownloading = true
         scope.launch {
@@ -879,20 +955,16 @@ fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
                 val response = RetrofitClient.getInstance(context).downloadQuizResultsPdf(quizId)
                 if (response.isSuccessful && response.body() != null) {
                     val body: ResponseBody = response.body()!!
-                    // Odbieramy parę: (sukces, wiadomość o błędzie)
                     val (isSuccess, errorMessage) = savePdfToDownloads(context, body, "wyniki_quizu_${quizId}.pdf")
-
                     if (isSuccess) {
                         snackbarHostState.showSnackbar("Raport PDF zapisany w Pobranych")
                     } else {
-                        // Wyświetlamy konkretny błąd w Snackbarze
                         snackbarHostState.showSnackbar("Błąd zapisu pliku: $errorMessage")
                     }
                 } else {
                     snackbarHostState.showSnackbar("Błąd pobierania PDF: ${response.code()}")
                 }
             } catch (e: Exception) {
-                // Tutaj też możemy wyświetlić konkretny błąd sieci
                 snackbarHostState.showSnackbar("Błąd sieci: ${e.message ?: "Nieznany błąd"}")
             } finally {
                 isDownloading = false
@@ -951,20 +1023,14 @@ fun TeacherQuizResultsScreen(navController: NavHostController, quizId: Long) {
                                 )
                             }
                         }
-
-
-                            Text("Wynik: ${result.correctAnswers}/${result.totalQuestions} (${String.format("%.1f%%", result.score)})")
-                            Text("Data: ${result.completionDate}", style = MaterialTheme.typography.bodyMedium)
-
-                        // ... reszta informacji o wyniku bez zmian
-
+                        Text("Wynik: ${result.correctAnswers}/${result.totalQuestions} (${String.format("%.1f%%", result.score)})")
+                        Text("Data: ${result.completionDate}", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
         }
     }
 
-    // Dialog potwierdzający usunięcie
     if (showDeleteDialog != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },

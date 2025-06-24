@@ -1,3 +1,10 @@
+/**
+ * @file QuizController.java
+ * @brief Kontroler odpowiedzialny za zarządzanie quizami w ramach kursów w systemie.
+ *
+ * Udostępnia endpointy do pobierania, dodawania, aktualizowania i usuwania quizów,
+ * a także do pobierania statystyk quizów.
+ */
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;
@@ -14,6 +21,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * @brief Kontroler odpowiedzialny za zarządzanie quizami w ramach kursów w systemie.
+ *
+ * Udostępnia endpointy do pobierania, dodawania, aktualizowania i usuwania quizów,
+ * a także do pobierania statystyk quizów.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/courses")
@@ -24,15 +37,24 @@ public class QuizController {
     private final QuizResultRepository quizResultRepository;
     private final UserCourseRepository userCourseRepository;
     private final QuizQuestionRepository quizQuestionRepository;
-   private final UserRepository userRepository;
+    private final UserRepository userRepository;
 
-
-
+    /**
+     * @brief Konstruktor klasy QuizController.
+     * @param courseRepository Repozytorium kursów.
+     * @param quizRepository Repozytorium quizów.
+     * @param quizResultRepository Repozytorium wyników quizów.
+     * @param userCourseRepository Repozytorium powiązań użytkowników z kursami.
+     * @param quizQuestionRepository Repozytorium pytań quizowych.
+     * @param userRepository Repozytorium użytkowników.
+     */
     @Autowired
     public QuizController(CourseRepository courseRepository,
                           QuizRepository quizRepository,
                           QuizResultRepository quizResultRepository,
-                          UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, UserRepository userRepository) {
+                          UserCourseRepository userCourseRepository,
+                          QuizQuestionRepository quizQuestionRepository,
+                          UserRepository userRepository) {
         this.courseRepository = courseRepository;
         this.quizRepository = quizRepository;
         this.quizResultRepository = quizResultRepository;
@@ -41,14 +63,20 @@ public class QuizController {
         this.userRepository = userRepository;
     }
 
+    /**
+     * @brief Pobiera wszystkie quizy dla danego kursu.
+     * @param id ID kursu.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o błędzie (jeśli dotyczy)
+     * - quizzes (List<Quiz>) - lista quizów (w przypadku sukcesu)
+     */
     @GetMapping("/{id}/quizzes")
     public ResponseEntity<?> getCourseQuizzes(@PathVariable Long id) {
-        log.info("Pobieranie quizów dla kursu ID: {}", id);
         Authentication auth = Utils.getAuthentication();
         if (Utils.isTeacher(auth)) {
             boolean owns = courseRepository.findByIdAndTeacherUsername(id, Utils.currentUsername()).isPresent();
             if (!owns) {
-                log.warn("Nauczyciel {} próbował uzyskać dostęp do quizów kursu ID: {} bez uprawnień", Utils.currentUsername(), id);
                 return ResponseEntity.status(403).body(Map.of(
                         "success", false,
                         "message", "Brak dostępu do tego kursu"));
@@ -58,7 +86,6 @@ public class QuizController {
         } else {
             Long userId = Utils.getCurrentUserId(userRepository);
             if (!userCourseRepository.existsByUserIdAndCourseId(userId, id)) {
-                log.warn("Użytkownik {} nie jest zapisany na kurs ID: {}", userId, id);
                 return ResponseEntity.status(403).body(Map.of(
                         "success", false,
                         "message", "Nie jesteś zapisany na ten kurs"));
@@ -66,31 +93,35 @@ public class QuizController {
         }
 
         if (!courseRepository.existsById(id)) {
-            log.error("Kurs ID: {} nie znaleziony", id);
             return ResponseEntity.status(404).body(Map.of(
                     "success", false,
                     "message", "Kurs nie znaleziony"));
         }
 
         List<Quiz> quizzes = quizRepository.findByCourseId(id);
-        log.info("Pobrano {} quizów dla kursu ID: {}", quizzes.size(), id);
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "quizzes", quizzes
         ));
     }
 
+    /**
+     * @brief Dodaje nowy quiz do określonego kursu.
+     * @param id ID kursu.
+     * @param quiz Obiekt Quiz zawierający dane quizu.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     * - quiz (Quiz) - dodany quiz (w przypadku sukcesu)
+     */
     @PostMapping("/{id}/quizzes")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> addQuiz(@PathVariable Long id, @RequestBody Quiz quiz) {
-        log.info("Próba dodania quizu do kursu ID: {} przez użytkownika {}", id, Utils.currentUsername());
         if (quiz.getTitle() == null || quiz.getTitle().isBlank()) {
-            log.warn("Próba dodania quizu z pustym tytułem dla kursu ID: {}", id);
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Tytuł quizu jest wymagany"));
         }
         if (quiz.getNumberOfQuestionsToDisplay() <= 0) {
-            log.warn("Próba dodania quizu z nieprawidłową ilością pytań do wyświetlenia: {}", quiz.getNumberOfQuestionsToDisplay());
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Ilość pytań do wyświetlenia musi być większa niż 0"));
         }
@@ -99,37 +130,39 @@ public class QuizController {
                 .map(course -> {
                     if (Utils.isTeacher(Utils.getAuthentication()) &&
                             !course.getTeacher().getUsername().equals(Utils.currentUsername())) {
-                        log.error("Brak dostępu do kursu ID: {} dla nauczyciela {}", id, Utils.currentUsername());
                         return ResponseEntity.status(403)
                                 .body(Map.of("success", false, "message", "Brak dostępu do tego kursu"));
                     }
                     quiz.setCourse(course);
                     Quiz savedQuiz = quizRepository.save(quiz);
-                    log.info("Quiz '{}' (ID: {}) dodany do kursu ID: {}", savedQuiz.getTitle(), savedQuiz.getId(), id);
+                    log.info("Dodano quiz '{}' (ID: {}) do kursu ID: {}", quiz.getTitle(), savedQuiz.getId(), id);
                     return ResponseEntity.ok(Map.of(
                             "success", true,
                             "message", "Quiz dodany pomyślnie",
                             "quiz", savedQuiz
                     ));
                 })
-                .orElseGet(() -> {
-                    log.error("Kurs ID: {} nie znaleziony", id);
-                    return ResponseEntity.status(404)
-                            .body(Map.of("success", false, "message", "Kurs nie istnieje"));
-                });
+                .orElse(ResponseEntity.status(404)
+                        .body(Map.of("success", false, "message", "Kurs nie istnieje")));
     }
 
+    /**
+     * @brief Aktualizuje istniejący quiz.
+     * @param quizId ID quizu do zaktualizowania.
+     * @param quiz Obiekt Quiz zawierający zaktualizowane dane.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     * - quiz (Quiz) - zaktualizowany quiz (w przypadku sukcesu)
+     */
     @PutMapping("/quizzes/{quizId}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> updateQuiz(@PathVariable Long quizId, @RequestBody Quiz quiz) {
-        log.info("Próba edycji quizu ID: {} przez użytkownika {}", quizId, Utils.currentUsername());
         if (quiz.getTitle() == null || quiz.getTitle().isBlank()) {
-            log.warn("Próba edycji quizu ID: {} z pustym tytułem", quizId);
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Tytuł quizu jest wymagany"));
         }
         if (quiz.getNumberOfQuestionsToDisplay() <= 0) {
-            log.warn("Próba edycji quizu ID: {} z nieprawidłową ilością pytań do wyświetlenia: {}", quizId, quiz.getNumberOfQuestionsToDisplay());
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Ilość pytań do wyświetlenia musi być większa niż 0"));
         }
@@ -139,7 +172,6 @@ public class QuizController {
                     Course course = existingQuiz.getCourse();
                     if (Utils.isTeacher(Utils.getAuthentication()) &&
                             !course.getTeacher().getUsername().equals(Utils.currentUsername())) {
-                        log.warn("Nauczyciel {} próbował edytować quiz ID: {} bez uprawnień", Utils.currentUsername(), quizId);
                         return ResponseEntity.status(403)
                                 .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
                     }
@@ -147,57 +179,65 @@ public class QuizController {
                     existingQuiz.setDescription(quiz.getDescription());
                     existingQuiz.setNumberOfQuestionsToDisplay(quiz.getNumberOfQuestionsToDisplay());
                     Quiz updatedQuiz = quizRepository.save(existingQuiz);
-                    log.info("Quiz ID: {} edytowany pomyślnie", quizId);
+                    log.info("Zaktualizowano quiz '{}' (ID: {})", updatedQuiz.getTitle(), quizId);
                     return ResponseEntity.ok(Map.of(
                             "success", true,
                             "message", "Quiz zaktualizowany pomyślnie",
                             "quiz", updatedQuiz
                     ));
                 })
-                .orElseGet(() -> {
-                    log.error("Quiz ID: {} nie znaleziony", quizId);
-                    return ResponseEntity.status(404)
-                            .body(Map.of("success", false, "message", "Quiz nie znaleziony"));
-                });
+                .orElse(ResponseEntity.status(404)
+                        .body(Map.of("success", false, "message", "Quiz nie znaleziony")));
     }
 
+    /**
+     * @brief Usuwa quiz o podanym identyfikatorze.
+     * @param quizId ID quizu do usunięcia.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     */
     @DeleteMapping("/quizzes/{quizId}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     @Transactional
     public ResponseEntity<?> deleteQuiz(@PathVariable Long quizId) {
-        log.info("Próba usunięcia quizu ID: {} przez użytkownika {}", quizId, Utils.currentUsername());
         return quizRepository.findById(quizId)
                 .map(quiz -> {
                     Course course = quiz.getCourse();
                     if (Utils.isTeacher(Utils.getAuthentication()) &&
                             !course.getTeacher().getUsername().equals(Utils.currentUsername())) {
-                        log.warn("Nauczyciel {} próbował usunąć quiz ID: {} bez uprawnień", Utils.currentUsername(), quizId);
                         return ResponseEntity.status(403)
                                 .body(Map.of("success", false, "message", "Brak dostępu do tego quizu"));
                     }
                     quizQuestionRepository.deleteByQuizId(quizId);
                     quizRepository.delete(quiz);
-                    log.info("Quiz ID: {} usunięty pomyślnie", quizId);
+                    log.info("Usunięto quiz ID: {}", quizId);
                     return ResponseEntity.ok(Map.of(
                             "success", true,
                             "message", "Quiz usunięty pomyślnie"
                     ));
                 })
-                .orElseGet(() -> {
-                    log.error("Quiz ID: {} nie znaleziony", quizId);
-                    return ResponseEntity.status(404)
-                            .body(Map.of("success", false, "message", "Quiz nie znaleziony"));
-                });
+                .orElse(ResponseEntity.status(404)
+                        .body(Map.of("success", false, "message", "Quiz nie znaleziony")));
     }
 
+    /**
+     * @brief Pobiera statystyki dla wszystkich quizów w danym kursie.
+     * @param courseId ID kursu.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - courseId (Long) - ID kursu
+     * - stats (List<Map>) - lista statystyk dla każdego quizu:
+     *   - quizId (Long) - ID quizu
+     *   - quizTitle (String) - tytuł quizu
+     *   - attempts (Long) - liczba prób
+     *   - averageScore (Double) - średni wynik w procentach
+     */
     @GetMapping("/{courseId}/quiz-stats")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> getCourseQuizStats(@PathVariable Long courseId) {
-        log.info("Pobieranie statystyk quizów dla kursu ID: {} przez użytkownika {}", courseId, Utils.currentUsername());
-
         Authentication auth = Utils.getAuthentication();
         if (Utils.isTeacher(auth) && courseRepository.findByIdAndTeacherUsername(courseId, Utils.currentUsername()).isEmpty()) {
-            log.warn("Nauczyciel {} próbował uzyskać dostęp do statystyk kursu ID: {} bez uprawnień", Utils.currentUsername(), courseId);
             return ResponseEntity.status(403).body(Map.of(
                     "success", false,
                     "message", "Brak dostępu do tego kursu"));
@@ -221,7 +261,7 @@ public class QuizController {
             return quizStat;
         }).collect(Collectors.toList());
 
-        log.info("Pobrano statystyki dla {} quizów w kursie ID: {}", stats.size(), courseId);
+        log.info("Pobrano statystyki quizów dla kursu ID: {} przez użytkownika {}", courseId, Utils.currentUsername());
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "courseId", courseId,

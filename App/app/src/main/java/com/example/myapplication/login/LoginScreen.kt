@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.RegisterRequest
 import com.example.myapplication.RetrofitClient
+import com.example.myapplication.ServerConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,12 +25,71 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+/**
+ * @file LoginScreen.kt
+ * Zawiera komponenty kompozycyjne i funkcje obsługujące ekrany logowania i rejestracji.
+ *
+ * Ten plik definiuje interfejsy użytkownika dla procesów logowania i rejestracji,
+ * a także logikę biznesową związaną z komunikacją z serwerem w celu
+ * uwierzytelniania i rejestrowania użytkowników.
+ */
+
+/**
+ * Komponent kompozycyjny ekranu logowania.
+ *
+ * Ten komponent wyświetla interfejs użytkownika do logowania, umożliwiając użytkownikom
+ * wprowadzenie nazwy użytkownika i hasła. Obsługuje również nawigację do ekranu rejestracji
+ * oraz wyświetla wskaźnik ładowania podczas procesu uwierzytelniania.
+ * Umożliwia także zmianę adresu IP serwera.
+ *
+ * @param navController Kontroler nawigacji do obsługi przejść między ekranami.
+ */
 @Composable
 fun LoginScreen(navController: NavHostController) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // Stany dla okna dialogowego zmiany IP serwera
+    var showServerDialog by remember { mutableStateOf(false) }
+    var serverIpInput by remember { mutableStateOf(ServerConfig.getServerIp(context)) }
+
+    if (showServerDialog) {
+        AlertDialog(
+            onDismissRequest = { showServerDialog = false },
+            title = { Text("Zmień adres serwera") },
+            text = {
+                OutlinedTextField(
+                    value = serverIpInput,
+                    onValueChange = { serverIpInput = it },
+                    label = { Text("Adres IP serwera") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (serverIpInput.isNotBlank()) {
+                            ServerConfig.saveServerIp(context, serverIpInput)
+                            Toast.makeText(context, "Adres serwera zaktualizowany", Toast.LENGTH_SHORT).show()
+                            showServerDialog = false
+                        } else {
+                            Toast.makeText(context, "Adres IP nie może być pusty", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text("Zapisz")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showServerDialog = false }) {
+                    Text("Anuluj")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -36,6 +98,18 @@ fun LoginScreen(navController: NavHostController) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            IconButton(onClick = {
+                serverIpInput = ServerConfig.getServerIp(context)
+                showServerDialog = true
+            }) {
+                Icon(Icons.Default.Settings, contentDescription = "Zmień adres serwera")
+            }
+        }
+
         Text(
             text = "Logowanie",
             style = MaterialTheme.typography.headlineMedium
@@ -117,6 +191,15 @@ fun LoginScreen(navController: NavHostController) {
     }
 }
 
+/**
+ * Komponent kompozycyjny ekranu rejestracji.
+ *
+ * Ten komponent wyświetla interfejs użytkownika do rejestracji nowego konta, umożliwiając
+ * wprowadzenie nazwy użytkownika, hasła i kodu rejestracji. Obsługuje również nawigację
+ * powrotną do ekranu logowania oraz wyświetla wskaźnik ładowania podczas procesu rejestracji.
+ *
+ * @param navController Kontroler nawigacji do obsługi przejść między ekranami.
+ */
 @Composable
 fun RegisterScreen(navController: NavHostController) {
     var username by remember { mutableStateOf("") }
@@ -217,6 +300,19 @@ fun RegisterScreen(navController: NavHostController) {
     }
 }
 
+/**
+ * Funkcja do uwierzytelniania użytkownika poprzez wysłanie żądania POST do serwera.
+ *
+ * Ta funkcja wysyła dane logowania (nazwę użytkownika i hasło) do serwera.
+ * W zależności od odpowiedzi serwera wywołuje odpowiednie callbacki.
+ * Obsługuje zapis tokena JWT i roli użytkownika po udanym zalogowaniu.
+ *
+ * @param context Kontekst Androida, używany do wyświetlania Toastów i dostępu do SharedPreferences.
+ * @param username Nazwa użytkownika do uwierzytelnienia.
+ * @param password Hasło użytkownika do uwierzytelnienia.
+ * @param onSuccess Callback wywoływany po udanym uwierzytelnieniu, zwraca rolę i wiadomość.
+ * @param onError Callback wywoływany w przypadku błędu uwierzytelniania, zwraca komunikat o błędzie.
+ */
 private fun authenticateUser(
     context: Context,
     username: String,
@@ -227,7 +323,7 @@ private fun authenticateUser(
     CoroutineScope(Dispatchers.IO).launch {
         var connection: HttpURLConnection? = null
         try {
-            val serverUrl = "http://10.0.2.2:8080/api/auth/login"
+            val serverUrl = "${ServerConfig.getBaseUrl(context)}api/auth/login"
 
             val jsonPayload = JSONObject().apply {
                 put("username", username)
@@ -297,6 +393,19 @@ private fun authenticateUser(
     }
 }
 
+/**
+ * Funkcja do rejestrowania nowego użytkownika poprzez wysłanie żądania POST do serwera.
+ *
+ * Ta funkcja wysyła dane rejestracyjne (nazwę użytkownika, hasło i kod roli) do serwera
+ * za pośrednictwem Retrofit. W zależności od odpowiedzi serwera wywołuje odpowiednie callbacki.
+ *
+ * @param context Kontekst Androida, używany do wyświetlania Toastów.
+ * @param username Nazwa użytkownika do zarejestrowania.
+ * @param password Hasło użytkownika do zarejestrowania.
+ * @param roleCode Kod roli dla nowego użytkownika.
+ * @param onSuccess Callback wywoływany po udanej rejestracji, zwraca wiadomość.
+ * @param onError Callback wywoływany w przypadku błędu rejestracji, zwraca komunikat o błędzie.
+ */
 private fun registerUser(
     context: Context,
     username: String,
@@ -327,6 +436,16 @@ private fun registerUser(
     }
 }
 
+/**
+ * Zapisuje token JWT i rolę użytkownika w SharedPreferences.
+ *
+ * Ta funkcja przechowuje token uwierzytelniający JWT i przypisaną rolę użytkownika
+ * w prywatnych preferencjach współdzielonych aplikacji.
+ *
+ * @param context Kontekst Androida, używany do uzyskania dostępu do SharedPreferences.
+ * @param token Token JWT do zapisania.
+ * @param role Rola użytkownika do zapisania.
+ */
 private fun saveToken(context: Context, token: String, role: String) {
     val sharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
     sharedPreferences.edit()

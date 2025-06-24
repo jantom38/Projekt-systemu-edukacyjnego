@@ -12,6 +12,18 @@ import androidx.navigation.NavHostController
 import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 
+/**
+ * @file EnrollToGroupScreen.kt
+ * Ten plik definiuje ekran zapisu do grupy kursu.
+ */
+
+/**
+ * Kompozycyjny ekran umożliwiający zapisanie się na kurs grupowy.
+ * Użytkownik wprowadza klucz dostępu, aby dołączyć do kursu.
+ *
+ * @param navController Kontroler nawigacji do obsługi przejść między ekranami.
+ * @param courseGroupId Identyfikator grupy kursu, do której użytkownik chce dołączyć.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EnrollToGroupScreen(navController: NavHostController, courseGroupId: Long) {
@@ -19,7 +31,9 @@ fun EnrollToGroupScreen(navController: NavHostController, courseGroupId: Long) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    /** Klucz dostępu wprowadzony przez użytkownika.*/
     var accessKey by remember { mutableStateOf("") }
+    /** Stan ładowania danych. True, jeśli trwa zapisywanie, w przeciwnym razie false.*/
     var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -50,6 +64,7 @@ fun EnrollToGroupScreen(navController: NavHostController, courseGroupId: Long) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
+                    /** Walidacja klucza dostępu.*/
                     if (accessKey.isBlank()) {
                         scope.launch { snackbarHostState.showSnackbar("Wprowadź klucz dostępu") }
                         return@Button
@@ -58,11 +73,11 @@ fun EnrollToGroupScreen(navController: NavHostController, courseGroupId: Long) {
                         isLoading = true
                         try {
                             val api = RetrofitClient.getInstance(context)
-                            // ZMIANA: Wywołujemy nowy endpoint zapisu
+                            /** Wywołanie endpointu zapisu na kurs.*/
                             val response = api.enrollInCourseGroup(courseGroupId, mapOf("accessKey" to accessKey))
                             if (response.isSuccessful && response.body()?.success == true) {
                                 snackbarHostState.showSnackbar(response.body()?.message ?: "Zapisano na kurs!")
-                                // Wróć do menu głównego po pomyślnym zapisie
+                                /** Powrót do menu głównego po pomyślnym zapisie.*/
                                 navController.popBackStack("menu", inclusive = false)
                             } else {
                                 snackbarHostState.showSnackbar(response.body()?.message ?: "Nieprawidłowy klucz lub błąd serwera.")
@@ -78,6 +93,7 @@ fun EnrollToGroupScreen(navController: NavHostController, courseGroupId: Long) {
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading
             ) {
+                /** Wyświetlanie wskaźnika ładowania, jeśli trwa zapisywanie.*/
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {

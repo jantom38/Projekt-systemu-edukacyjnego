@@ -27,6 +27,19 @@ import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
+/**
+ * @file ManageFilesScreen.kt
+ *  This file contains the composable function for managing course files and its associated ViewModel.
+ */
+
+/**
+ *  ViewModel for the ManageFilesScreen.
+ *
+ * This ViewModel handles fetching, displaying, and deleting course-related files.
+ *
+ * @param context The application context.
+ * @param courseId The ID of the course for which files are being managed.
+ */
 class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewModel() {
     private val _files = mutableStateOf<List<CourseFile>>(emptyList())
     val files: State<List<CourseFile>> = _files
@@ -43,6 +56,11 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
         loadFiles()
     }
 
+    /**
+     *  Loads the list of files for the current course from the API.
+     *
+     * Updates the [_files], [_isLoading], and [_error] states based on the API response.
+     */
     fun loadFiles() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -67,6 +85,13 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
         }
     }
 
+    /**
+     *  Deletes a specific file from the course.
+     *
+     * @param fileId The ID of the file to be deleted.
+     * @param onSuccess Callback to be invoked when the file is successfully deleted.
+     * @param onError Callback to be invoked when an error occurs during file deletion, providing an error message.
+     */
     fun deleteFile(fileId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -99,6 +124,16 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
     }
 }
 
+/**
+ *  Composable function for the Manage Files Screen.
+ *
+ * This screen allows users to view, upload, and delete files associated with a specific course.
+ * It displays a list of files, provides an option to add new files via a file picker,
+ * and allows deleting existing files.
+ *
+ * @param navController The NavHostController for navigating between screens.
+ * @param courseId The ID of the course for which files are being managed.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManageFilesScreen(navController: NavHostController, courseId: Long) {

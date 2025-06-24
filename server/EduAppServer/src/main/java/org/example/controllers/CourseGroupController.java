@@ -1,3 +1,10 @@
+/**
+ * @file CourseGroupController.java
+ * @brief Kontroler odpowiedzialny za zarządzanie grupami kursów w systemie.
+ *
+ * Udostępnia endpointy do tworzenia, usuwania i zarządzania grupami kursów,
+ * zapisywania studentów na kursy poprzez grupy oraz duplikowania kursów w obrębie grup.
+ */
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;
@@ -15,9 +22,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * @brief Kontroler odpowiedzialny za zarządzanie grupami kursów w systemie.
+ *
+ * Udostępnia endpointy do tworzenia, usuwania i zarządzania grupami kursów,
+ * zapisywania studentów na kursy poprzez grupy oraz duplikowania kursów w obrębie grup.
+ */
 @Slf4j
 @RestController
-@RequestMapping("/api/course-groups") // Dedykowany mapping dla grup
+@RequestMapping("/api/course-groups")
 public class CourseGroupController {
 
     private final CourseGroupRepository courseGroupRepository;
@@ -28,9 +41,24 @@ public class CourseGroupController {
     private final QuizRepository quizRepository;
     private final CourseFileRepository courseFileRepository;
 
-
+    /**
+     * @brief Konstruktor klasy CourseGroupController.
+     * @param courseGroupRepository Repozytorium grup kursów.
+     * @param courseRepository Repozytorium kursów.
+     * @param userRepository Repozytorium użytkowników.
+     * @param userCourseRepository Repozytorium powiązań użytkowników z kursami.
+     * @param quizQuestionRepository Repozytorium pytań quizowych.
+     * @param quizRepository Repozytorium quizów.
+     * @param courseFileRepository Repozytorium plików kursów.
+     */
     @Autowired
-    public CourseGroupController(CourseGroupRepository courseGroupRepository, CourseRepository courseRepository, UserRepository userRepository, UserCourseRepository userCourseRepository, QuizQuestionRepository quizQuestionRepository, QuizRepository quizRepository, CourseFileRepository courseFileRepository) {
+    public CourseGroupController(CourseGroupRepository courseGroupRepository,
+                                 CourseRepository courseRepository,
+                                 UserRepository userRepository,
+                                 UserCourseRepository userCourseRepository,
+                                 QuizQuestionRepository quizQuestionRepository,
+                                 QuizRepository quizRepository,
+                                 CourseFileRepository courseFileRepository) {
         this.courseGroupRepository = courseGroupRepository;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
@@ -40,26 +68,36 @@ public class CourseGroupController {
         this.courseFileRepository = courseFileRepository;
     }
 
-    // Endpoint dla studentów i nauczycieli - pobiera listę wszystkich grup
+    /**
+     * @brief Pobiera listę wszystkich grup kursów.
+     * @return ResponseEntity z listą grup kursów w zależności od roli użytkownika:
+     * - Admin widzi wszystkie grupy
+     * - Nauczyciel widzi tylko swoje grupy
+     * - Student widzi wszystkie grupy
+     */
     @GetMapping
     public ResponseEntity<List<CourseGroup>> getAllCourseGroups() {
         Authentication auth = Utils.getAuthentication();
         String username = Utils.currentUsername();
 
         if (Utils.isAdmin(auth)) {
-            // Admin widzi wszystkie grupy
             return ResponseEntity.ok(courseGroupRepository.findAll());
         } else if (Utils.isTeacher(auth)) {
-            // Nauczyciel widzi tylko swoje grupy
             return ResponseEntity.ok(courseGroupRepository.findByTeacherUsername(username));
         } else {
-            // Student - można zwrócić pustą listę lub grupy publiczne (do dostosowania)
             return ResponseEntity.ok(courseGroupRepository.findAll());
         }
     }
-    // =================================================================================
-    // =========== NOWY, KLUCZOWY ENDPOINT DO ZAPISU NA KURS PRZEZ STUDENTA =============
-    // =================================================================================
+
+    /**
+     * @brief Zapisuje studenta na kurs w ramach grupy kursów.
+     * @param groupId ID grupy kursów.
+     * @param request Mapa zawierająca klucz dostępu:
+     * - accessKey (String) - klucz dostępu do kursu
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     */
     @PostMapping("/{groupId}/enroll")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<?> enrollInCourse(@PathVariable Long groupId, @RequestBody Map<String, String> request) {
@@ -68,13 +106,11 @@ public class CourseGroupController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Klucz dostępu jest wymagany."));
         }
 
-        // 1. Znajdź grupę kursów
         Optional<CourseGroup> groupOpt = courseGroupRepository.findById(groupId);
         if (groupOpt.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of("success", false, "message", "Grupa kursów nie znaleziona."));
         }
 
-        // 2. Znajdź kurs w tej grupie z pasującym kluczem dostępu
         Optional<Course> courseOpt = courseRepository.findByCourseGroupIdAndAccessKey(groupId, accessKey);
         if (courseOpt.isEmpty()) {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Nieprawidłowy klucz dostępu dla tej grupy kursów."));
@@ -83,12 +119,10 @@ public class CourseGroupController {
         Course course = courseOpt.get();
         User student = Utils.getCurrentUser(userRepository);
 
-        // 3. Sprawdź, czy użytkownik nie jest już zapisany
         if (userCourseRepository.existsByUserIdAndCourseId(student.getId(), course.getId())) {
             return ResponseEntity.ok(Map.of("success", true, "message", "Jesteś już zapisany na ten kurs."));
         }
 
-        // 4. Zapisz użytkownika na kurs
         UserCourse userCourse = new UserCourse(student, course);
         userCourseRepository.save(userCourse);
         log.info("Student '{}' zapisał się na kurs '{}' (ID: {}) z kluczem '{}'", student.getUsername(), course.getCourseName(), course.getId(), accessKey);
@@ -96,19 +130,55 @@ public class CourseGroupController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Zostałeś pomyślnie zapisany na kurs."));
     }
 
-
-    // Endpointy dla nauczyciela/admina
+    /**
+     * @brief Tworzy nową grupę kursów.
+     * @param request Mapa zawierająca dane grupy:
+     * - name (String) - nazwa grupy
+     * - description (String) - opis grupy
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     * - courseGroup (CourseGroup) - utworzona grupa kursów
+     */
     @PostMapping
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> createCourseGroup(@RequestBody Map<String, String> request) {
+        String name = request.get("name");
+        String description = request.get("description");
+
+        if (name == null || name.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Nazwa grupy jest wymagana"));
+        }
+
         User teacher = Utils.getCurrentUser(userRepository);
         CourseGroup courseGroup = new CourseGroup();
-        courseGroup.setName(request.get("name"));
-        courseGroup.setDescription(request.get("description"));
+        courseGroup.setName(name);
+        courseGroup.setDescription(description);
         courseGroup.setTeacher(teacher);
+
         CourseGroup savedGroup = courseGroupRepository.save(courseGroup);
-        return ResponseEntity.ok(savedGroup);
+        log.info("Utworzono nową grupę kursów '{}' (ID: {}) przez użytkownika '{}'", name, savedGroup.getId(), teacher.getUsername());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Grupa kursów utworzona pomyślnie",
+                "courseGroup", savedGroup
+        ));
     }
+
+    /**
+     * @brief Duplikuje kurs w obrębie grupy kursów.
+     * @param groupId ID grupy kursów.
+     * @param courseId ID kursu do zduplikowania.
+     * @param request Mapa zawierająca dane nowego kursu:
+     * - newCourseName (String) - nazwa nowego kursu
+     * - newAccessKey (String) - nowy klucz dostępu
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     * - course (Course) - zduplikowany kurs
+     */
     @PostMapping("/course-groups/{groupId}/courses/{courseId}/duplicate")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     @Transactional
@@ -118,13 +188,22 @@ public class CourseGroupController {
         String newCourseName = request.get("newCourseName");
         String newAccessKey = request.get("newAccessKey");
 
-        // 1. Walidacja i pobranie danych
+        if (newCourseName == null || newCourseName.isBlank() || newAccessKey == null || newAccessKey.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Nazwa kursu i klucz dostępu są wymagane"));
+        }
+
         Course originalCourse = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Oryginalny kurs o ID: " + courseId + " nie istnieje."));
         CourseGroup group = courseGroupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Grupa kursów o ID: " + groupId + " nie istnieje."));
 
-        // 2. Stworzenie nowej encji kursu
+        Authentication auth = Utils.getAuthentication();
+        if (Utils.isTeacher(auth) && !originalCourse.getTeacher().getUsername().equals(Utils.currentUsername())) {
+            return ResponseEntity.status(403)
+                    .body(Map.of("success", false, "message", "Brak uprawnień do duplikowania tego kursu"));
+        }
+
         Course newCourse = new Course();
         newCourse.setCourseName(newCourseName);
         newCourse.setAccessKey(newAccessKey);
@@ -134,7 +213,6 @@ public class CourseGroupController {
         Course savedNewCourse = courseRepository.save(newCourse);
         log.info("Utworzono nowy kurs '{}' (ID: {}) na podstawie kursu ID: {}", newCourse.getCourseName(), savedNewCourse.getId(), originalCourse.getId());
 
-        // 3. Głębokie kopiowanie quizów
         List<Quiz> originalQuizzes = quizRepository.findByCourseId(originalCourse.getId());
         for (Quiz originalQuiz : originalQuizzes) {
             Quiz newQuiz = new Quiz();
@@ -143,14 +221,13 @@ public class CourseGroupController {
             newQuiz.setCourse(savedNewCourse);
             newQuiz.setNumberOfQuestionsToDisplay(originalQuiz.getNumberOfQuestionsToDisplay());
 
-            // Kopiowanie pytań dla każdego quizu
             List<QuizQuestion> newQuestions = originalQuiz.getQuestions().stream().map(originalQuestion -> {
                 QuizQuestion newQuestion = new QuizQuestion();
                 newQuestion.setQuestionText(originalQuestion.getQuestionText());
                 newQuestion.setQuestionType(originalQuestion.getQuestionType());
                 newQuestion.setOptions(originalQuestion.getOptions());
                 newQuestion.setCorrectAnswer(originalQuestion.getCorrectAnswer());
-                newQuestion.setQuiz(newQuiz); // Powiązanie z nowym quizem
+                newQuestion.setQuiz(newQuiz);
                 return newQuestion;
             }).collect(Collectors.toList());
 
@@ -159,47 +236,48 @@ public class CourseGroupController {
         }
         log.info("Skopiowano {} quizów dla nowego kursu ID: {}", originalQuizzes.size(), savedNewCourse.getId());
 
-        // 4. Utworzenie nowych powiązań do istniejących plików (współdzielenie)
         List<CourseFile> originalFiles = courseFileRepository.findByCourseId(originalCourse.getId());
         for (CourseFile originalFile : originalFiles) {
             CourseFile newFileLink = new CourseFile();
-            newFileLink.setFileName(originalFile.getFileName());   // Użyj tej samej nazwy
-            newFileLink.setFileUrl(originalFile.getFileUrl());     // Użyj tego samego URL
-            newFileLink.setCourse(savedNewCourse);                 // Przypisz do nowego kursu
+            newFileLink.setFileName(originalFile.getFileName());
+            newFileLink.setFileUrl(originalFile.getFileUrl());
+            newFileLink.setCourse(savedNewCourse);
             courseFileRepository.save(newFileLink);
         }
         log.info("Utworzono {} powiązań do istniejących plików dla nowego kursu ID: {}", originalFiles.size(), savedNewCourse.getId());
 
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Kurs, quizy i pliki zostały pomyślnie zduplikowane."
+                "message", "Kurs, quizy i pliki zostały pomyślnie zduplikowane",
+                "course", savedNewCourse
         ));
     }
+
+    /**
+     * @brief Usuwa grupę kursów.
+     * @param groupId ID grupy do usunięcia.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     */
     @DeleteMapping("/{groupId}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
-    @Transactional // Ważne dla spójności operacji na wielu obiektach
+    @Transactional
     public ResponseEntity<?> deleteCourseGroup(@PathVariable Long groupId) {
-        // Znajdź grupę do usunięcia
         CourseGroup groupToDelete = courseGroupRepository.findById(groupId)
-                .orElse(null);
+                .orElseThrow(() -> new RuntimeException("Grupa kursów o ID: " + groupId + " nie istnieje."));
 
-        if (groupToDelete == null) {
-            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Grupa kursów nie znaleziona."));
-        }
-
-        // Sprawdź uprawnienia - tylko właściciel grupy lub admin może ją usunąć
+        Authentication auth = Utils.getAuthentication();
         String currentUsername = Utils.currentUsername();
-        if (Utils.isTeacher(Utils.getAuthentication()) && !groupToDelete.getTeacher().getUsername().equals(currentUsername)) {
+        if (Utils.isTeacher(auth) && !groupToDelete.getTeacher().getUsername().equals(currentUsername)) {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Brak uprawnień do usunięcia tej grupy."));
         }
 
-        // "Osieracanie" kursów - usuwamy ich powiązanie z grupą
         for (Course course : groupToDelete.getCourses()) {
             course.setCourseGroup(null);
-            courseRepository.save(course); // Zapisz zmiany w kursie
+            courseRepository.save(course);
         }
 
-        // Usuń samą, już pustą grupę
         courseGroupRepository.delete(groupToDelete);
         log.info("Użytkownik '{}' usunął grupę kursów '{}' (ID: {})", currentUsername, groupToDelete.getName(), groupId);
 

@@ -6,7 +6,7 @@ import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.properties.UnitValue; // POPRAWIONY IMPORT
+import com.itextpdf.layout.properties.UnitValue;
 import org.example.database.Quiz;
 import org.example.database.QuizAnswer;
 import org.example.database.QuizResult;
@@ -17,29 +17,43 @@ import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * Usługa odpowiedzialna za generowanie raportów PDF z wynikami quizów.
+ * Wykorzystuje bibliotekę iText7 do tworzenia dokumentów PDF.
+ */
 @Service
 public class PdfGenerationService {
 
+    /**
+     * Generuje plik PDF zawierający szczegółowe wyniki dla danego quizu.
+     * Raport zawiera podsumowanie quizu oraz listę wyników poszczególnych studentów,
+     * wraz z ich odpowiedziami na pytania.
+     *
+     * @param quiz Obiekt Quiz, dla którego generowany jest raport.
+     * @param results Lista obiektów QuizResult zawierających wyniki studentów.
+     * @return ByteArrayInputStream zawierający wygenerowany plik PDF.
+     */
     public ByteArrayInputStream generateQuizResultsPdf(Quiz quiz, List<QuizResult> results) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PdfDocument pdfDoc = new PdfDocument(new PdfWriter(out));
         Document document = new Document(pdfDoc);
 
-        // Nagłówek
+        // Nagłówek dokumentu
         document.add(new Paragraph("Raport wyników dla quizu: " + quiz.getTitle())
                 .setBold().setFontSize(20).setMarginBottom(5));
         document.add(new Paragraph("Wygenerowano: " + java.time.LocalDate.now())
                 .setFontSize(10));
         document.add(new Paragraph("\n"));
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-        // Wyniki dla każdego studenta
+        // Sekcja dla każdego studenta
         for (QuizResult result : results) {
-            document.add(new Paragraph("Student: " + result.getUser().getUsername())
+            String studentName = result.getUser() != null ? result.getUser().getUsername() : "Nieznany Użytkownik";
+            document.add(new Paragraph("Student: " + studentName)
                     .setBold().setFontSize(14));
-            document.add(new Paragraph("Data ukończenia: " + result.getCompletionDate().format(formatter)));
-            document.add(new Paragraph(String.format("Wynik: %d/%d (%.2f%%)",
+            document.add(new Paragraph(String.format("Data ukończenia: %s",
+                    result.getCompletionDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))))
+                    .setFontSize(10));
+            document.add(new Paragraph(String.format("Wynik: %d / %d (%.2f%%)",
                     result.getCorrectAnswers(), result.getTotalQuestions(),
                     (double) result.getCorrectAnswers() * 100 / result.getTotalQuestions())));
 

@@ -1,3 +1,12 @@
+/**
+ * @file AccessKeyScreen.kt
+ *  Komponent kompozycyjny UI do weryfikacji klucza dostępu do kursu.
+ *
+ * Plik zawiera definicję funkcji kompozycyjnej {@link com.example.myapplication.courses.AccessKeyScreen},
+ * która tworzy interfejs użytkownika umożliwiający studentom wprowadzenie
+ * i zweryfikowanie klucza dostępu wymaganego do dołączenia do kursu.
+ * Komponent obsługuje stan UI, interakcje użytkownika oraz komunikację z API.
+ */
 package com.example.myapplication.courses
 
 import android.util.Log
@@ -12,8 +21,17 @@ import androidx.navigation.NavHostController
 import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 
-@Composable
+/**
+ * Komponent kompozycyjny ekranu weryfikacji klucza dostępu do kursu.
+ * Umożliwia użytkownikowi wprowadzenie klucza dostępu i weryfikację go z serwerem.
+ * W przypadku pomyślnej weryfikacji, wywołuje zdefiniowaną akcję `onSuccess`.
+ *
+ * @param navController Kontroler nawigacji Jetpack Compose do obsługi nawigacji.
+ * @param courseId Identyfikator kursu, dla którego weryfikowany jest klucz dostępu.
+ * @param onSuccess Funkcja wywoływana po pomyślnej weryfikacji klucza dostępu.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AccessKeyScreen(navController: NavHostController, courseId: Long, onSuccess: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -42,6 +60,7 @@ fun AccessKeyScreen(navController: NavHostController, courseId: Long, onSuccess:
                 value = accessKey,
                 onValueChange = { accessKey = it },
                 label = { Text("Klucz dostępu") },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -49,7 +68,7 @@ fun AccessKeyScreen(navController: NavHostController, courseId: Long, onSuccess:
                 onClick = {
                     if (accessKey.isBlank()) {
                         scope.launch {
-                            snackbarHostState.showSnackbar("Wprowadź klucz dostępu")
+                            snackbarHostState.showSnackbar("Klucz dostępu nie może być pusty")
                         }
                         return@Button
                     }

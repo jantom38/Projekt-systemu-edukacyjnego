@@ -28,35 +28,56 @@ import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
+/**
+ * @file CourseDeatilsScreen.kt
+ * Ten plik zawiera definicje ViewModelu [CourseDetailsViewModel] oraz kompozycyjnej funkcji ekranu [CourseDetailsScreen],
+ * odpowiedzialnych za wyświetlanie szczegółów kursu, zarządzanie plikami i quizami,
+ * a także nawigację i obsługę błędów w aplikacji.
+ */
+
+/**
+ * ViewModel dla ekranu szczegółów kursu.
+ * Odpowiedzialny za pobieranie i zarządzanie danymi o plikach i quizach dla danego kursu.
+ *
+ * @param context Kontekst aplikacji, używany do inicjalizacji RetrofitClient.
+ * @param courseId Identyfikator kursu, dla którego mają być wyświetlane szczegóły.
+ */
 class CourseDetailsViewModel(context: Context, private val courseId: Long) : ViewModel() {
+    /** Lista plików powiązanych z kursem. */
     private val _files = mutableStateOf<List<CourseFile>>(emptyList())
     val files: State<List<CourseFile>> = _files
 
+    /** Lista quizów powiązanych z kursem. */
     private val _quizzes = mutableStateOf<List<Quiz>>(emptyList())
     val quizzes: State<List<Quiz>> = _quizzes
 
+    /** Stan ładowania danych. True, jeśli dane są aktualnie ładowane, w przeciwnym razie false. */
     private val _isLoading = mutableStateOf(true)
     val isLoading: State<Boolean> = _isLoading
 
+    /** Wiadomość o błędzie, jeśli wystąpi problem podczas ładowania danych. Null, jeśli brak błędów. */
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
+    /** Instancja RetrofitClient do komunikacji z API. */
     private val apiService = RetrofitClient.getInstance(context)
 
     init {
         loadContent()
     }
 
+    /**
+     * Ładuje zawartość kursu, w tym pliki i quizy, z API.
+     * Obsługuje stany ładowania i błędy.
+     */
     fun loadContent() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                // Load files
                 _files.value = apiService.getCourseFiles(courseId)
                 Log.d("CourseDetails", "Loaded files: ${_files.value}")
 
-                // Load quizzes
                 val quizResponse = apiService.getCourseQuizzes(courseId)
                 if (quizResponse.success) {
                     _quizzes.value = quizResponse.quizzes
@@ -82,6 +103,14 @@ class CourseDetailsViewModel(context: Context, private val courseId: Long) : Vie
         }
     }
 
+    /**
+     * Usuwa quiz o podanym identyfikatorze.
+     * Po udanym usunięciu odświeża listę quizów.
+     *
+     * @param quizId Identyfikator quizu do usunięcia.
+     * @param onSuccess Funkcja wywoływana po pomyślnym usunięciu quizu.
+     * @param onError Funkcja wywoływana w przypadku błędu podczas usuwania quizu, z komunikatem o błędzie.
+     */
     fun deleteQuiz(quizId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -90,7 +119,7 @@ class CourseDetailsViewModel(context: Context, private val courseId: Long) : Vie
                 if (response.isSuccessful && response.body()?.success == true) {
                     Log.d("CourseDetails", "Quiz ID: $quizId usunięty pomyślnie")
                     onSuccess()
-                    loadContent() // Odśwież listę quizów
+                    loadContent()
                 } else {
                     val errorMessage = response.body()?.message ?: "Błąd serwera: ${response.code()}"
                     Log.e("CourseDetails", "Błąd usuwania quizu ID: $quizId, kod: ${response.code()}, wiadomość: $errorMessage")
@@ -114,6 +143,13 @@ class CourseDetailsViewModel(context: Context, private val courseId: Long) : Vie
     }
 }
 
+/**
+ * Kompozycyjna funkcja ekranu szczegółów kursu.
+ * Wyświetla informacje o kursie, w tym pliki i quizy, oraz umożliwia nawigację do innych ekranów.
+ *
+ * @param navController Kontroler nawigacji do obsługi przejść między ekranami.
+ * @param courseId Identyfikator kursu, dla którego wyświetlane są szczegóły.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
@@ -123,12 +159,19 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
             return CourseDetailsViewModel(context, courseId) as T
         }
     })
+    /**
+     * Efekt uruchamiany, gdy zmienia się element na stosie powrotnym nawigacji.
+     * Zapewnia odświeżenie zawartości po powrocie do tego ekranu.
+     */
     LaunchedEffect(key1 = navController.currentBackStackEntry) {
         viewModel.loadContent()
     }
+    /** Stan dla paska snackbar do wyświetlania krótkich wiadomości. */
     val snackbarHostState = remember { SnackbarHostState() }
+    /** Zakres korutyn dla operacji asynchronicznych, np. wyświetlania snackbarów. */
     val coroutineScope = rememberCoroutineScope()
 
+    /** Aktualnie wybrana zakładka (0 dla plików, 1 dla quizów). */
     var selectedTabIndex by remember { mutableStateOf(0) }
 
     Scaffold(
@@ -150,7 +193,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // Pierwszy rząd przycisków
+            /** Przyciski akcji dla zarządzania kursem. */
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -169,9 +212,8 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                     Text("Dodaj quiz")
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp)) // Odstęp między rzędami
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Drugi rząd przycisków
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -194,6 +236,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            /** Obsługa stanów ładowania i błędów. */
             when {
                 viewModel.isLoading.value -> {
                     Box(
@@ -225,6 +268,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                 }
 
                 else -> {
+                    /** Zakładki do przełączania między plikami a quizami. */
                     TabRow(selectedTabIndex = selectedTabIndex) {
                         Tab(
                             selected = selectedTabIndex == 0,
@@ -238,8 +282,9 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                         )
                     }
 
+                    /** Wyświetlanie zawartości w zależności od wybranej zakładki. */
                     when (selectedTabIndex) {
-                        0 -> { // Sekcja Pliki
+                        0 -> {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(bottom = 16.dp)
@@ -262,7 +307,7 @@ fun CourseDetailsScreen(navController: NavHostController, courseId: Long) {
                                 }
                             }
                         }
-                        1 -> { // Sekcja Quizy
+                        1 -> {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(bottom = 16.dp)

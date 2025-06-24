@@ -2,23 +2,52 @@ package org.example.database;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+/**
+ * Klasa encji reprezentująca kurs.
+ * Mapowana jest do tabeli "Courses" w bazie danych.
+ */
 @Entity
 @Table(name = "Courses")
 public class Course {
+    /**
+     * Unikalny identyfikator kursu.
+     * Jest to klucz główny generowany automatycznie.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * Nazwa kursu. Musi być unikalna.
+     */
     @Column(unique = true)
-    private String courseName; // Zmiana na camelCase
+    private String courseName;
+    /**
+     * Opis kursu.
+     */
     private String description;
-    private String accessKey; // Zmiana na camelCase
-@ManyToOne(fetch=FetchType.LAZY)
-@JoinColumn(name = "teacher_id", nullable = false)
-@JsonIgnore
-private User teacher;
+    /**
+     * Klucz dostępu do kursu.
+     */
+    private String accessKey;
+    /**
+     * Nauczyciel przypisany do kursu.
+     * Wiele kursów może mieć tego samego nauczyciela.
+     * Kolumna 'teacher_id' jest kluczem obcym i nie może być nullem.
+     * Pole jest ignorowane podczas serializacji JSON.
+     */
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name = "teacher_id", nullable = false)
+    @JsonIgnore
+    private User teacher;
 
 
+    /**
+     * Grupa kursów, do której należy ten kurs.
+     * Wiele kursów może należeć do jednej grupy kursów.
+     * Kolumna 'course_group_id' jest kluczem obcym.
+     * Pole jest ignorowane podczas serializacji JSON.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_group_id")
     @JsonIgnore

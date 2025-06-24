@@ -25,6 +25,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.collections.get
 
+/**
+ * @file SolveQuizScreen.kt
+ *  This file contains the composable function for solving a quiz and its associated ViewModel.
+ */
+
+/**
+ *  Composable function for the Solve Quiz Screen.
+ *
+ * This screen allows users to take a quiz by displaying questions and collecting their answers.
+ * Once completed, it navigates to the quiz result screen.
+ *
+ * @param navController The NavHostController for navigating between screens.
+ * @param quizId The ID of the quiz to be solved.
+ * @param courseId The ID of the course to which the quiz belongs.
+ */
 @Composable
 fun SolveQuizScreen(navController: NavHostController, quizId: Long, courseId: Long) {
     val context = LocalContext.current
@@ -53,8 +68,12 @@ fun SolveQuizScreen(navController: NavHostController, quizId: Long, courseId: Lo
                 }
             }
         }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
             when {
                 viewModel.isLoading.value -> {
                     Box(
@@ -64,37 +83,29 @@ fun SolveQuizScreen(navController: NavHostController, quizId: Long, courseId: Lo
                         CircularProgressIndicator()
                     }
                 }
-
                 viewModel.error.value != null -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = viewModel.error.value!!,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadQuiz() }) {
-                            Text("Spróbuj ponownie")
-                        }
-                    }
+                    Text(
+                        text = "Błąd: ${viewModel.error.value}",
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
-
                 else -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        itemsIndexed(
-                            items = viewModel.questions.value,
-                            key = { _, question -> question.id!! }
-                        ) { index, question ->
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        itemsIndexed(viewModel.questions.value) { index, question ->
+                            val selectedAnswers = viewModel.selectedAnswers.value[question.id] ?: emptyList()
                             QuestionItem(
                                 question = question,
                                 index = index + 1,
-                                selectedAnswers = viewModel.selectedAnswers.value[question.id]
-                                    ?: emptyList(),
+                                selectedAnswers = selectedAnswers,
                                 onAnswerSelected = { answers ->
-                                    viewModel.onAnswerSelected(question.id!!, answers)
+                                    question.id?.let {
+                                        viewModel.onAnswerSelected(it, answers)
+                                    }
                                 }
                             )
                         }
@@ -105,26 +116,45 @@ fun SolveQuizScreen(navController: NavHostController, quizId: Long, courseId: Lo
     }
 }
 
-class SolveQuizViewModel(context: Context, val quizId: Long) : ViewModel() {
+/**
+ *  ViewModel for the SolveQuizScreen.
+ *
+ * This ViewModel manages the state of the quiz, including loading questions,
+ * storing user's selected answers, and submitting the answers to the API.
+ *
+ * @param context The application context.
+ * @param quizId The ID of the quiz to be solved.
+ */
+class SolveQuizViewModel(context: Context, private val quizId: Long) : ViewModel() {
     private val apiService = RetrofitClient.getInstance(context)
-    private val _quiz = mutableStateOf<Quiz?>(null)
-    private val _questions = mutableStateOf<List<QuizQuestion>>(emptyList())
-    private val _selectedAnswers = mutableStateOf<Map<Long, List<String>>>(emptyMap())
-    private val _isLoading = mutableStateOf(true)
-    private val _error = mutableStateOf<String?>(null)
-    private val _showSubmitButton = mutableStateOf(false)
 
+    private val _quiz = mutableStateOf<Quiz?>(null)
     val quiz: State<Quiz?> = _quiz
+
+    private val _questions = mutableStateOf<List<QuizQuestion>>(emptyList())
     val questions: State<List<QuizQuestion>> = _questions
-    val selectedAnswers: State<Map<Long, List<String>>> = _selectedAnswers
+
+    private val _isLoading = mutableStateOf(true)
     val isLoading: State<Boolean> = _isLoading
+
+    private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
+
+    private val _selectedAnswers = mutableStateOf<Map<Long, List<String>>>(emptyMap())
+    val selectedAnswers: State<Map<Long, List<String>>> = _selectedAnswers
+
+    private val _showSubmitButton = mutableStateOf(false)
     val showSubmitButton: State<Boolean> = _showSubmitButton
 
     init {
         loadQuiz()
     }
 
+    /**
+     *  Loads the quiz details and its questions from the API.
+     *
+     * Updates the [_quiz], [_questions], [_isLoading], [_error], and [_showSubmitButton] states.
+     */
     fun loadQuiz() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -147,12 +177,25 @@ class SolveQuizViewModel(context: Context, val quizId: Long) : ViewModel() {
             }
         }
     }
+
+    /**
+     *  Updates the selected answers for a given question.
+     *
+     * @param questionId The ID of the question.
+     * @param answers A list of strings representing the selected answers for the question.
+     */
     fun onAnswerSelected(questionId: Long, answers: List<String>) {
         _selectedAnswers.value = _selectedAnswers.value.toMutableMap().apply {
             put(questionId, answers)
         }
     }
 
+    /**
+     *  Submits the user's answers to the API.
+     *
+     * @return A [SubmissionResultDTO] object containing the result of the submission.
+     * @throws Exception if there is an error during submission.
+     */
     suspend fun submitAnswers(): SubmissionResultDTO {
         return withContext(Dispatchers.IO) {
             val response = apiService.submitQuizAnswers(

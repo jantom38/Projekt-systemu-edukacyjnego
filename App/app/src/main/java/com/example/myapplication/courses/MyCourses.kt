@@ -17,15 +17,31 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * @file MyCourses.kt
+ * Ten plik definiuje ekran wyświetlający listę kursów, do których użytkownik jest zapisany.
+ */
+
+/**
+ * Kompozycyjny ekran wyświetlający listę kursów, do których użytkownik jest zapisany.
+ *
+ * @param navController Kontroler nawigacji do obsługi przejść między ekranami.
+ */
 @Composable
 fun MyCoursesScreen(navController: NavHostController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHost = remember { SnackbarHostState() }
 
+    /** Lista kursów użytkownika.*/
     var courses by remember { mutableStateOf<List<Course>>(emptyList()) }
+    /** Stan ładowania danych. True, jeśli dane są aktualnie ładowane, w przeciwnym razie false.*/
     var isLoading by remember { mutableStateOf(true) }
 
+    /**
+     * Efekt uruchamiany raz przy pierwszym uruchomieniu komponentu.
+     * Pobiera listę kursów użytkownika z API.
+     */
     LaunchedEffect(Unit) {
         scope.launch(Dispatchers.IO) {
             try {
@@ -64,9 +80,11 @@ fun MyCoursesScreen(navController: NavHostController) {
         snackbarHost = { SnackbarHost(snackbarHost) }
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
+            /** Wyświetlanie wskaźnika ładowania, jeśli dane są ładowane.*/
             if (isLoading) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else {
+                /** Lista kursów użytkownika.*/
                 LazyColumn(
                     Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp)

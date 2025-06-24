@@ -20,6 +20,20 @@ import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
+/**
+ * @file CourseListScreen.kt
+ * Ten plik definiuje struktury danych dla kursów, ViewModel do zarządzania listą kursów
+ * oraz kompozycyjny ekran wyświetlający listę dostępnych kursów.
+ */
+
+/**
+ * Klasa danych reprezentująca kurs.
+ *
+ * @param id Unikalny identyfikator kursu. Domyślnie 0.
+ * @param courseName Nazwa kursu.
+ * @param description Opis kursu.
+ * @param accessKey Klucz dostępu do kursu.
+ */
 data class Course(
     val id: Long = 0,
     val courseName: String,
@@ -28,23 +42,36 @@ data class Course(
 )
 
 
-
+/**
+ * ViewModel dla ekranu listy kursów.
+ * Odpowiedzialny za pobieranie i zarządzanie listą kursów.
+ *
+ * @param context Kontekst aplikacji, używany do inicjalizacji RetrofitClient.
+ */
 class CourseViewModel(context: Context) : ViewModel() {
+    /** Lista kursów.*/
     private val _courses = mutableStateOf<List<Course>>(emptyList())
     val courses: State<List<Course>> = _courses
 
+    /** Stan ładowania danych. False domyślnie.*/
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
+    /** Wiadomość o błędzie, jeśli wystąpi problem podczas ładowania danych. Null domyślnie.*/
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
+    /** Instancja RetrofitClient do komunikacji z API.*/
     private val apiService = RetrofitClient.getInstance(context)
 
     init {
         loadCourses()
     }
 
+    /**
+     * Ładuje listę kursów z API.
+     * Obsługuje stany ładowania i błędy, w tym błędy HTTP i sieci.
+     */
     fun loadCourses() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -69,6 +96,13 @@ class CourseViewModel(context: Context) : ViewModel() {
     }
 }
 
+/**
+ * Kompozycyjna funkcja ekranu listy kursów.
+ * Wyświetla listę dostępnych kursów i umożliwia nawigację do szczegółów kursu.
+ *
+ * @param navController Kontroler nawigacji do obsługi przejść między ekranami.
+ * @param onCourseClick Funkcja wywoływana po kliknięciu na kurs, przyjmująca obiekt [Course].
+ */
 @Composable
 fun CourseListScreen(
     navController: NavHostController,
@@ -80,6 +114,7 @@ fun CourseListScreen(
             return CourseViewModel(context) as T
         }
     })
+    /** Efekt uruchamiany, gdy zmienia się element na stosie powrotnym nawigacji, odświeżający listę kursów.*/
     LaunchedEffect(key1 = navController.currentBackStackEntry) {
         viewModel.loadCourses()
     }
@@ -99,6 +134,7 @@ fun CourseListScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        /** Obsługa stanów ładowania, błędów i pustej listy kursów.*/
         when {
             isLoading -> {
                 Box(

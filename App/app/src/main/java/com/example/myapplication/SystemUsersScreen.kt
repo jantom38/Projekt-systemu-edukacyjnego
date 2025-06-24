@@ -26,14 +26,39 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import retrofit2.Response
 
+/**
+ * @file SystemUsersScreen.kt
+ *  Zawiera ViewModel oraz komponenty kompozycyjne dla ekranu zarządzania użytkownikami systemu.
+ *
+ * Ten plik definiuje logikę i interfejs użytkownika do przeglądania wszystkich użytkowników
+ * w systemie oraz do usuwania użytkowników (z wyjątkiem administratorów).
+ */
+
 // --- ViewModel ---
+/**
+ *  ViewModel dla ekranu zarządzania użytkownikami systemu.
+ *
+ * Odpowiada za pobieranie listy wszystkich użytkowników systemu,
+ * a także za obsługę operacji usuwania użytkowników. Zarządza stanami ładowania i błędów.
+ *
+ * @param context Kontekst aplikacji, wymagany do inicjalizacji RetrofitClient.
+ */
 class SystemUsersViewModel(private val context: Context) : ViewModel() {
     private val api: CourseApiService = RetrofitClient.getInstance(context)
 
+    /**
+     *  Lista użytkowników systemu.
+     */
     var users by mutableStateOf<List<UserCourseInfo>>(emptyList())
         private set
+    /**
+     *  Stan ładowania danych. True, jeśli dane są aktualnie ładowane.
+     */
     var isLoading by mutableStateOf(false)
         private set
+    /**
+     *  Komunikat o błędzie, jeśli wystąpił problem podczas operacji. Null, jeśli brak błędu.
+     */
     var error by mutableStateOf<String?>(null)
         private set
 
@@ -41,6 +66,12 @@ class SystemUsersViewModel(private val context: Context) : ViewModel() {
         loadAllUsers()
     }
 
+    /**
+     *  Ładuje wszystkich użytkowników z systemu.
+     *
+     * Wykonuje asynchroniczne żądanie do API w celu pobrania listy użytkowników.
+     * Aktualizuje stany [isLoading] i [error] w zależności od wyniku operacji.
+     */
     fun loadAllUsers() {
         viewModelScope.launch {
             isLoading = true
@@ -62,6 +93,16 @@ class SystemUsersViewModel(private val context: Context) : ViewModel() {
         }
     }
 
+    /**
+     *  Usuwa użytkownika z systemu.
+     *
+     * Wysyła żądanie do API w celu usunięcia użytkownika o podanym identyfikatorze.
+     * Po udanym usunięciu odświeża listę użytkowników.
+     *
+     * @param userId Identyfikator użytkownika do usunięcia.
+     * @param onSuccess Callback wywoływany po udanym usunięciu, z komunikatem sukcesu.
+     * @param onError Callback wywoływany w przypadku błędu, z komunikatem błędu.
+     */
     fun deleteUserFromSystem(
         userId: Long,
         onSuccess: (String) -> Unit,
@@ -85,7 +126,18 @@ class SystemUsersViewModel(private val context: Context) : ViewModel() {
         }
     }
 
+    /**
+     *  Fabryka do tworzenia instancji [SystemUsersViewModel].
+     *
+     * Wymagana do wstrzykiwania kontekstu do ViewModelu.
+     */
     class Factory(private val context: Context) : ViewModelProvider.Factory {
+        /**
+         *  Tworzy nową instancję ViewModelu.
+         * @param modelClass Klasa ViewModelu do utworzenia.
+         * @return Nowa instancja [SystemUsersViewModel].
+         * @throws IllegalArgumentException Jeśli podana klasa ViewModelu nie jest [SystemUsersViewModel].
+         */
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(SystemUsersViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
@@ -97,6 +149,15 @@ class SystemUsersViewModel(private val context: Context) : ViewModel() {
 }
 
 // --- Screen Composable ---
+/**
+ *  Komponent kompozycyjny ekranu zarządzania użytkownikami systemu.
+ *
+ * Wyświetla listę wszystkich użytkowników systemu, umożliwiając administratorowi
+ * ich usunięcie (z wyłączeniem innych administratorów). Obsługuje stany ładowania,
+ * błędów i wyświetla dialog potwierdzenia usunięcia.
+ *
+ * @param navController Kontroler nawigacji do obsługi przejść wstecz.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SystemUsersScreen(navController: NavHostController) {
@@ -203,6 +264,15 @@ fun SystemUsersScreen(navController: NavHostController) {
 }
 
 // --- Helper Composable for User Item ---
+/**
+ *  Komponent kompozycyjny reprezentujący pojedynczego użytkownika w systemie.
+ *
+ * Wyświetla nazwę użytkownika, ID i rolę. Umożliwia usunięcie użytkownika
+ * (z wyjątkiem roli "ADMIN").
+ *
+ * @param user Obiekt [UserCourseInfo] zawierający dane użytkownika.
+ * @param onDeleteClick Lambda wywoływana, gdy użytkownik kliknie przycisk usuwania.
+ */
 @Composable
 fun UserSystemItem(user: UserCourseInfo, onDeleteClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {

@@ -21,6 +21,22 @@ import com.example.myapplication.QuizQuestion
 import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 
+/**
+ * @file AddQuizScreen.kt
+ *  This file contains the composable function for adding new quizzes.
+ */
+
+/**
+ *  Composable function for the Add Quiz Screen.
+ *
+ * This screen allows users to create a new quiz for a specific course.
+ * Users can input the quiz title, description, the number of questions to display randomly,
+ * and define multiple questions with different types (multiple choice, true/false, open-ended)
+ * along with their respective options and correct answers.
+ *
+ * @param navController The NavHostController for navigating between screens.
+ * @param courseId The ID of the course to which the quiz will be added.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddQuizScreen(navController: NavHostController, courseId: Long) {
@@ -33,7 +49,13 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
     // New state for the number of questions to display
     var numberOfQuestionsToDisplay by remember { mutableStateOf("1") } // Default to 1
 
-    // Model danych dla pytania w trakcie edycji
+    /**
+     *  Data model for a quiz question input during editing.
+     * @param questionText The text of the question.
+     * @param questionType The type of the question (e.g., "multiple_choice", "true_false", "open_ended").
+     * @param options A mutable map of options for multiple choice or true/false questions.
+     * @param correctAnswers A list of correct answers for the question.
+     */
     data class QuizQuestionInput(
         val questionText: String = "",
         val questionType: String = "multiple_choice", // Domyślny typ: wielokrotnego wyboru
@@ -43,12 +65,22 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
 
     var questions by remember { mutableStateOf<MutableList<QuizQuestionInput>>(mutableListOf()) }
 
-    // Funkcja dodająca nowe pytanie
+    /**
+     *  Adds a new, empty question to the list of questions.
+     */
     fun addQuestion() {
         questions = (questions + QuizQuestionInput()).toMutableList()
     }
 
-    // Funkcja aktualizująca pytanie z resetowaniem pól przy zmianie typu
+    /**
+     *  Updates a question at a specific index in the list.
+     *
+     * If the question type changes, it resets the options and correct answers
+     * to match the new question type's requirements.
+     *
+     * @param index The index of the question to update.
+     * @param update A lambda function that takes the current [QuizQuestionInput] and returns the updated one.
+     */
     fun updateQuestion(index: Int, update: QuizQuestionInput.() -> QuizQuestionInput) {
         questions = questions.mapIndexed { i, q ->
             if (i == index) {
@@ -72,7 +104,10 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
         }.toMutableList()
     }
 
-    // Funkcja dodająca nową opcję
+    /**
+     *  Adds a new option to a multiple-choice question at a given index.
+     * @param index The index of the question to which the option will be added.
+     */
     fun addOption(index: Int) {
         updateQuestion(index) {
             val newOptions = options.toMutableMap()
@@ -82,7 +117,14 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
         }
     }
 
-    // Funkcja usuwająca opcję
+    /**
+     *  Removes an option from a question at a given index.
+     *
+     * Re-indexes the remaining options and updates the correct answers accordingly.
+     *
+     * @param index The index of the question from which the option will be removed.
+     * @param key The key of the option to remove (e.g., "A", "B").
+     */
     fun removeOption(index: Int, key: String) {
         updateQuestion(index) {
             val newOptions = options.toMutableMap()
@@ -95,7 +137,11 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
         }
     }
 
-    // Funkcja przełączająca poprawną odpowiedź
+    /**
+     *  Toggles the correctness of an answer option for a question.
+     * @param index The index of the question.
+     * @param key The key of the option to toggle.
+     */
     fun toggleCorrectAnswer(index: Int, key: String) {
         updateQuestion(index) {
             val newCorrectAnswers = if (correctAnswers.contains(key)) {

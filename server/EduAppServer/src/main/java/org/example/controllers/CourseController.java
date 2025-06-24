@@ -1,3 +1,10 @@
+/**
+ * @file CourseController.java
+ * @brief Kontroler odpowiedzialny za zarządzanie kursami w systemie.
+ *
+ * Udostępnia endpointy do tworzenia, usuwania i zarządzania kursami,
+ * weryfikacji kluczy dostępu, zarządzania plikami kursów oraz użytkownikami przypisanymi do kursów.
+ */
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;
@@ -19,6 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * @brief Kontroler odpowiedzialny za zarządzanie kursami w systemie.
+ *
+ * Udostępnia endpointy do tworzenia, usuwania i zarządzania kursami,
+ * weryfikacji kluczy dostępu, zarządzania plikami kursów oraz użytkownikami przypisanymi do kursów.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/courses")
@@ -31,21 +44,36 @@ public class CourseController {
     private final CourseFileRepository courseFileRepository;
     private final UserRepository userRepository;
     private final UserCourseRepository userCourseRepository;
-    private final CourseGroupRepository courseGroupRepository; // DODANO REPOZYTORIUM GRUP
+    private final CourseGroupRepository courseGroupRepository;
 
+    /**
+     * @brief Konstruktor klasy CourseController.
+     * @param courseRepository Repozytorium kursów.
+     * @param courseFileRepository Repozytorium plików kursów.
+     * @param userRepository Repozytorium użytkowników.
+     * @param userCourseRepository Repozytorium powiązań użytkowników z kursami.
+     * @param courseGroupRepository Repozytorium grup kursów.
+     */
     @Autowired
     public CourseController(CourseRepository courseRepository,
                             CourseFileRepository courseFileRepository,
                             UserRepository userRepository,
                             UserCourseRepository userCourseRepository,
-                            CourseGroupRepository courseGroupRepository) { // DODANO W KONSTRUKTORZE
+                            CourseGroupRepository courseGroupRepository) {
         this.courseRepository = courseRepository;
         this.courseFileRepository = courseFileRepository;
         this.userRepository = userRepository;
         this.userCourseRepository = userCourseRepository;
-        this.courseGroupRepository = courseGroupRepository; // DODANO
+        this.courseGroupRepository = courseGroupRepository;
     }
 
+    /**
+     * @brief Pobiera listę wszystkich kursów.
+     * @return Lista kursów w zależności od roli użytkownika:
+     * - Nauczyciel widzi tylko swoje kursy
+     * - Admin widzi wszystkie kursy
+     * - Inni użytkownicy widzą wszystkie kursy
+     */
     @GetMapping
     public List<Course> getAllCourses() {
         Authentication auth = Utils.getAuthentication();
@@ -57,19 +85,26 @@ public class CourseController {
         return courseRepository.findAll();
     }
 
-    // =================================================================================
-    // =========== POPRAWIONA METODA addCourse - KLUCZOWA ZMIANA =======================
-    // =================================================================================
+    /**
+     * @brief Dodaje nowy kurs do systemu.
+     * @param request Mapa zawierająca dane kursu:
+     * - courseName (String) - nazwa kursu
+     * - description (String) - opis kursu
+     * - accessKey (String) - klucz dostępu
+     * - courseGroupId (Integer) - ID grupy kursów (opcjonalne)
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     * - course (Course) - dodany kurs (w przypadku sukcesu)
+     */
     @PostMapping
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> addCourse(@RequestBody Map<String, Object> request) {
         String courseName = (String) request.get("courseName");
         String description = (String) request.get("description");
         String accessKey = (String) request.get("accessKey");
-        // Poprawne odczytanie courseGroupId jako Integer, a następnie konwersja do Long
         Integer courseGroupIdInt = (Integer) request.get("courseGroupId");
         Long courseGroupId = courseGroupIdInt != null ? courseGroupIdInt.longValue() : null;
-
 
         if (accessKey == null || accessKey.isBlank() || courseName == null || courseName.isBlank()) {
             return ResponseEntity.badRequest()
@@ -85,13 +120,11 @@ public class CourseController {
         course.setAccessKey(accessKey);
         course.setTeacher(teacher);
 
-        // Jeśli podano courseGroupId, znajdź grupę i przypisz ją do kursu
         if (courseGroupId != null) {
             CourseGroup group = courseGroupRepository.findById(courseGroupId)
                     .orElseThrow(() -> new RuntimeException("Grupa kursów o podanym ID nie istnieje"));
             course.setCourseGroup(group);
         } else {
-            // Opcjonalnie: obsłuż przypadek, gdy kurs jest tworzony bez grupy
             log.warn("Tworzenie kursu '{}' bez przypisania do grupy.", courseName);
         }
 
@@ -104,7 +137,15 @@ public class CourseController {
         ));
     }
 
-
+    /**
+     * @brief Weryfikuje klucz dostępu do kursu i zapisuje użytkownika na kursie w przypadku poprawnego klucza.
+     * @param id ID kursu.
+     * @param request Mapa zawierająca klucz dostępu:
+     * - accessKey (String) - klucz dostępu do weryfikacji
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     */
     @PostMapping("/{id}/verify-key")
     public ResponseEntity<?> verifyAccessKey(@PathVariable Long id,
                                              @RequestBody Map<String, String> request) {
@@ -138,6 +179,14 @@ public class CourseController {
                         .body(Map.of("success", false, "message", "Kurs nie znaleziony")));
     }
 
+    /**
+     * @brief Pobiera listę plików przypisanych do kursu.
+     * @param id ID kursu.
+     * @return ResponseEntity z listą plików kursu lub komunikatem o błędzie:
+     * - 403 Brak dostępu do kursu
+     * - 404 Kurs nie znaleziony
+     * - 200 Lista plików kursu
+     */
     @GetMapping("/{id}/files")
     public ResponseEntity<?> getCourseFiles(@PathVariable Long id) {
         Authentication auth = Utils.getAuthentication();
@@ -168,6 +217,14 @@ public class CourseController {
         return ResponseEntity.ok(courseFileRepository.findByCourseId(id));
     }
 
+    /**
+     * @brief Usuwa plik przypisany do kursu.
+     * @param courseId ID kursu.
+     * @param fileId ID pliku do usunięcia.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     */
     @DeleteMapping("/{courseId}/files/{fileId}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> deleteCourseFile(@PathVariable Long courseId,
@@ -197,8 +254,14 @@ public class CourseController {
                 .orElse(ResponseEntity.status(404)
                         .body(Map.of("success", false, "message", "Plik nie znaleziony dla tego kursu")));
     }
-    @PreAuthorize("hasRole('STUDENT')")
 
+    /**
+     * @brief Pobiera listę kursów, na które zapisany jest aktualny użytkownik (student).
+     * @return ResponseEntity z listą kursów użytkownika:
+     * - success (boolean) - zawsze true
+     * - courses (List<Course>) - lista kursów użytkownika
+     */
+    @PreAuthorize("hasRole('STUDENT')")
     @GetMapping("/my-courses")
     public ResponseEntity<?> getUserCourses() {
         String username = Utils.currentUsername();
@@ -217,6 +280,13 @@ public class CourseController {
         ));
     }
 
+    /**
+     * @brief Usuwa kurs wraz z powiązaniami użytkowników.
+     * @param id ID kursu do usunięcia.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     @Transactional
@@ -229,10 +299,7 @@ public class CourseController {
 
         return courseRepository.findById(id)
                 .map(course -> {
-                    // Najpierw usuwamy wszystkie powiązania user-course dla tego kursu
                     userCourseRepository.deleteByCourseId(id);
-
-                    // Następnie usuwamy sam kurs
                     courseRepository.delete(course);
 
                     return ResponseEntity.ok(Map.of(
@@ -244,6 +311,17 @@ public class CourseController {
                         .body(Map.of("success", false, "message", "Kurs nie istnieje")));
     }
 
+    /**
+     * @brief Pobiera listę użytkowników przypisanych do kursu.
+     * @param courseId ID kursu.
+     * @return ResponseEntity z listą użytkowników kursu:
+     * - success (boolean) - zawsze true
+     * - users (List<Map>) - lista użytkowników z informacjami:
+     * - id (Long) - ID użytkownika
+     * - username (String) - nazwa użytkownika
+     * - role (String) - rola użytkownika
+     * - joinedAt (Timestamp) - data dołączenia do kursu
+     */
     @GetMapping("/{courseId}/users")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> getCourseUsers(@PathVariable Long courseId) {
@@ -276,6 +354,14 @@ public class CourseController {
         ));
     }
 
+    /**
+     * @brief Usuwa użytkownika z kursu.
+     * @param courseId ID kursu.
+     * @param userId ID użytkownika do usunięcia.
+     * @return ResponseEntity z wynikiem operacji:
+     * - success (boolean) - czy operacja się powiodła
+     * - message (String) - komunikat o wyniku
+     */
     @DeleteMapping("/{courseId}/users/{userId}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     @Transactional

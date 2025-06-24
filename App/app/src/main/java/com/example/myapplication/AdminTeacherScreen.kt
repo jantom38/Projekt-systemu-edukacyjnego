@@ -29,6 +29,17 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.UUID
 
+/**
+ * @file AdminTeacherScreen.kt
+ *  This file contains the Composable function for the Admin/Teacher screen, allowing management of users, course groups, and registration codes.
+ */
+
+/**
+ *  Composable function for the Admin and Teacher functionalities screen.
+ * This screen allows administrators and teachers to manage users (promote/demote, delete),
+ * manage course groups (create, delete, duplicate courses within groups), and generate student registration codes.
+ * @param navController The NavHostController used for navigating between screens.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminTeacherScreen(navController: NavHostController) {
@@ -50,11 +61,16 @@ fun AdminTeacherScreen(navController: NavHostController) {
     var selectedUserIdForDeletion by remember { mutableStateOf<Long?>(null) }
     var selectedUsernameForDeletion by remember { mutableStateOf<String?>(null) }
     var showDuplicateCourseDialog by remember { mutableStateOf<Pair<Long, Course>?>(null) }
-    var showCreateGroupDialog by remember { mutableStateOf(false) } // Dodane
+    var showCreateGroupDialog by remember { mutableStateOf(false) }
     var showDeleteGroupDialog by remember { mutableStateOf<CourseGroup?>(null) }
 
     val viewModel: SystemUsersViewModel = viewModel(factory = SystemUsersViewModel.Factory(context))
 
+    /**
+     *  Formats an ISO date-time string into a more readable localized format.
+     * @param isoDateTime The ISO date-time string to format.
+     * @return A formatted date-time string, or "Nieznana data" if the input is null or invalid.
+     */
     fun formatExpiresAt(isoDateTime: String?): String {
         if (isoDateTime == null) return "Nieznana data"
         return try {
@@ -68,6 +84,10 @@ fun AdminTeacherScreen(navController: NavHostController) {
         }
     }
 
+    /**
+     *  Generates a student registration code by calling the API.
+     * Updates the [generatedCode] and [expiresAt] states upon success, or shows a Snackbar on error.
+     */
     fun generateStudentCode() {
         isGenerating = true
         scope.launch(Dispatchers.IO) {
@@ -95,6 +115,10 @@ fun AdminTeacherScreen(navController: NavHostController) {
         }
     }
 
+    /**
+     *  Loads the list of course groups from the API.
+     * Updates the [courseGroups] state upon success, or shows a Snackbar on error.
+     */
     fun loadCourseGroups() {
         scope.launch(Dispatchers.IO) {
             try {
@@ -115,6 +139,10 @@ fun AdminTeacherScreen(navController: NavHostController) {
         }
     }
 
+    /**
+     *  Loads the list of all users from the API.
+     * Updates the [users] and [isLoading] states based on the API response.
+     */
     fun loadUsers() {
         scope.launch(Dispatchers.IO) {
             try {
@@ -138,6 +166,12 @@ fun AdminTeacherScreen(navController: NavHostController) {
         }
     }
 
+    /**
+     *  Promotes a user to a teacher role via the API.
+     * Reloads the user list on success, or shows a Snackbar on error.
+     * @param userId The ID of the user to promote.
+     * @param username The username of the user to promote (for display purposes).
+     */
     fun promoteToTeacher(userId: Long, username: String) {
         scope.launch(Dispatchers.IO) {
             try {
@@ -159,6 +193,12 @@ fun AdminTeacherScreen(navController: NavHostController) {
         }
     }
 
+    /**
+     *  Demotes a user to a student role via the API.
+     * Reloads the user list on success, or shows a Snackbar on error.
+     * @param userId The ID of the user to demote.
+     * @param username The username of the user to demote (for display purposes).
+     */
     fun demoteToStudent(userId: Long, username: String) {
         scope.launch(Dispatchers.IO) {
             try {
@@ -309,7 +349,6 @@ fun AdminTeacherScreen(navController: NavHostController) {
         }
     }
 
-    // Dodane: Dialog do tworzenia nowej grupy
     if (showCreateGroupDialog) {
         CreateCourseGroupDialog(
             onDismiss = { showCreateGroupDialog = false },
@@ -566,5 +605,3 @@ fun AdminTeacherScreen(navController: NavHostController) {
         )
     }
 }
-
-// Dodane: Funkcja pomocnicza do tworzenia grupy kursów

@@ -24,6 +24,20 @@ import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
+/**
+ * @file EditQustionScreen.kt
+ *  This file contains the composable function for editing individual quiz questions and its associated ViewModel.
+ */
+
+/**
+ *  ViewModel for the EditQuestionScreen.
+ *
+ * This ViewModel handles fetching and updating a specific quiz question.
+ *
+ * @param context The application context.
+ * @param quizId The ID of the quiz to which the question belongs.
+ * @param questionId The ID of the question to be edited.
+ */
 class EditQuestionViewModel(context: Context, private val quizId: Long, private val questionId: Long) : ViewModel() {
     private val _question = mutableStateOf<QuizQuestion?>(null)
     val question: State<QuizQuestion?> = _question
@@ -40,6 +54,12 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
         loadQuestion()
     }
 
+    /**
+     *  Loads the details of a specific quiz question from the API.
+     *
+     * It fetches the entire quiz first to find the specific question.
+     * Updates the [_question], [_isLoading], and [_error] states based on the API response.
+     */
     fun loadQuestion() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -77,6 +97,13 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
         }
     }
 
+    /**
+     *  Updates an existing quiz question.
+     *
+     * @param question The [QuizQuestion] object with updated details.
+     * @param onSuccess Callback to be invoked when the question is successfully updated.
+     * @param onError Callback to be invoked when an error occurs during question update, providing an error message.
+     */
     fun updateQuestion(question: QuizQuestion, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -111,6 +138,16 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
     }
 }
 
+/**
+ *  Composable function for the Edit Question Screen.
+ *
+ * This screen allows users to modify the details of a specific quiz question,
+ * including its text, type, options (for multiple choice/true-false), and correct answer(s).
+ *
+ * @param navController The NavHostController for navigating between screens.
+ * @param quizId The ID of the quiz to which the question belongs.
+ * @param questionId The ID of the question to be edited.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionId: Long) {
@@ -143,7 +180,6 @@ fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionI
             questionType = question.questionType
             correctAnswer = question.correctAnswer
             options = question.options ?: emptyMap()
-
             // Special handling for true_false to ensure options are correctly set
             if (question.questionType == "true_false" && options.isEmpty()) {
                 options = mapOf("True" to "Prawda", "False" to "Fałsz")
@@ -198,73 +234,73 @@ fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionI
                         }
                     }
                 }
-                else -> {
-                    OutlinedTextField(
-                        value = questionText,
-                        onValueChange = { questionText = it },
-                        label = { Text("Treść pytania") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Question Type Dropdown
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
+                viewModel.question.value != null -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        OutlinedTextField(
-                            value = questionTypes.find { it.first == questionType }?.second ?: "",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Typ pytania") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            questionTypes.forEach { type ->
-                                DropdownMenuItem(
-                                    text = { Text(type.second) },
-                                    onClick = {
-                                        questionType = type.first
-                                        // Reset options and correct answer based on new type
-                                        when (type.first) {
-                                            "multiple_choice" -> {
-                                                options = mapOf("A" to "", "B" to "")
-                                                correctAnswer = ""
-                                            }
-                                            "true_false" -> {
-                                                options = mapOf("True" to "Prawda", "False" to "Fałsz")
-                                                correctAnswer = "" // Or set a default like "True"
-                                            }
-                                            "open_ended" -> {
-                                                options = emptyMap()
-                                                correctAnswer = ""
-                                            }
-                                        }
-                                        expanded = false
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 16.dp)
-                                )
-                            }
+                        item {
+                            OutlinedTextField(
+                                value = questionText,
+                                onValueChange = { questionText = it },
+                                label = { Text("Treść pytania") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Conditional rendering based on question type
-                    if (questionType == "multiple_choice") {
-                        LazyColumn(
-                            modifier = Modifier.heightIn(max = 200.dp)
-                        ) {
-                            items(options.toList()) { (key, value) ->
-                                Row(
+                        item {
+                            ExposedDropdownMenuBox(
+                                expanded = expanded,
+                                onExpandedChange = { expanded = !expanded }
+                            ) {
+                                OutlinedTextField(
+                                    value = when (questionType) {
+                                        "multiple_choice" -> "Wielokrotnego wyboru"
+                                        "true_false" -> "Prawda/Fałsz"
+                                        else -> "Otwarte"
+                                    },
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Typ pytania") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
+                                        .menuAnchor()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+                                    questionTypes.forEach { type ->
+                                        DropdownMenuItem(
+                                            text = { Text(type.second) },
+                                            onClick = {
+                                                questionType = type.first
+                                                // Reset options and correct answer based on new type
+                                                when (questionType) {
+                                                    "multiple_choice" -> {
+                                                        options = mapOf("A" to "", "B" to "")
+                                                        correctAnswer = ""
+                                                    }
+                                                    "true_false" -> {
+                                                        options = mapOf("True" to "Prawda", "False" to "Fałsz")
+                                                        correctAnswer = "True" // Default for True/False
+                                                    }
+                                                    "open_ended" -> {
+                                                        options = emptyMap()
+                                                        correctAnswer = ""
+                                                    }
+                                                }
+                                                expanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        if (questionType == "multiple_choice") {
+                            items(options.toList()) { (key, value) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     OutlinedTextField(
@@ -278,10 +314,9 @@ fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionI
                                     IconButton(
                                         onClick = {
                                             options = options.toMutableMap().apply { remove(key) }
-                                            // Also remove from correctAnswer if it was selected
                                             correctAnswer = correctAnswer.split(",").filter { it != key }.joinToString(",")
                                         },
-                                        enabled = options.size > 2 // Minimum 2 options
+                                        enabled = options.size > 2
                                     ) {
                                         Icon(Icons.Default.Delete, contentDescription = "Usuń opcję")
                                     }
@@ -294,140 +329,148 @@ fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionI
                                         options = options.toMutableMap().apply { put(newKey, "") }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                    enabled = options.size < 10 // Max 10 options
+                                    enabled = options.size < 10
                                 ) {
                                     Text("Dodaj opcję")
                                 }
                             }
+                            item {
+                                OutlinedTextField(
+                                    value = correctAnswer,
+                                    onValueChange = { correctAnswer = it },
+                                    label = { Text("Poprawna odpowiedź (np. A,B)") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        } else if (questionType == "true_false") {
+                            item {
+                                ExposedDropdownMenuBox(
+                                    expanded = tfExpanded,
+                                    onExpandedChange = { tfExpanded = !tfExpanded }
+                                ) {
+                                    OutlinedTextField(
+                                        value = when (correctAnswer) {
+                                            "True" -> "Prawda"
+                                            "False" -> "Fałsz"
+                                            else -> ""
+                                        },
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Poprawna odpowiedź") },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tfExpanded) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .menuAnchor()
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = tfExpanded,
+                                        onDismissRequest = { tfExpanded = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Prawda") },
+                                            onClick = {
+                                                correctAnswer = "True"
+                                                tfExpanded = false
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Fałsz") },
+                                            onClick = {
+                                                correctAnswer = "False"
+                                                tfExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        } else { // open_ended
+                            item {
+                                OutlinedTextField(
+                                    value = correctAnswer,
+                                    onValueChange = { correctAnswer = it },
+                                    label = { Text("Poprawna odpowiedź") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = correctAnswer,
-                            onValueChange = { correctAnswer = it },
-                            label = { Text("Poprawna odpowiedź (np. A,B)") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    } else if (questionType == "true_false") {
-                        // True/False Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = tfExpanded,
-                            onExpandedChange = { tfExpanded = !tfExpanded }
-                        ) {
-                            OutlinedTextField(
-                                value = when (correctAnswer) {
-                                    "True" -> "Prawda"
-                                    "False" -> "Fałsz"
-                                    else -> ""
+                        item {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = {
+                                    if (questionText.isBlank()) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Treść pytania jest wymagana")
+                                        }
+                                        return@Button
+                                    }
+                                    if (questionType == "multiple_choice") {
+                                        if (options.size < 2) {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Wymagane co najmniej 2 opcje")
+                                            }
+                                            return@Button
+                                        }
+                                        if (options.any { it.value.isBlank() }) {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Wszystkie opcje muszą być wypełnione")
+                                            }
+                                            return@Button
+                                        }
+                                        if (correctAnswer.isBlank()) {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Poprawna odpowiedź jest wymagana")
+                                            }
+                                            return@Button
+                                        }
+                                        val correctAnswers = correctAnswer.split(",").map { it.trim() }
+                                        if (correctAnswers.any { !options.containsKey(it) }) {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Wszystkie poprawne odpowiedzi muszą być kluczami opcji")
+                                            }
+                                            return@Button
+                                        }
+                                    } else if (questionType == "true_false") {
+                                        if (correctAnswer !in setOf("True", "False")) {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Poprawna odpowiedź musi być 'Prawda' lub 'Fałsz'")
+                                            }
+                                            return@Button
+                                        }
+                                    } else if (questionType == "open_ended") {
+                                        if (correctAnswer.isBlank()) {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Poprawna odpowiedź jest wymagana")
+                                            }
+                                            return@Button
+                                        }
+                                    }
+                                    viewModel.updateQuestion(
+                                        QuizQuestion(
+                                            id = questionId,
+                                            questionText = questionText,
+                                            questionType = questionType,
+                                            options = options,
+                                            correctAnswer = correctAnswer,
+                                            quizId = quizId
+                                        ),
+                                        onSuccess = {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Pytanie zaktualizowane pomyślnie")
+                                                navController.popBackStack()
+                                            }
+                                        },
+                                        onError = { error ->
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar(error)
+                                            }
+                                        }
+                                    )
                                 },
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Poprawna odpowiedź") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tfExpanded) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor()
-                            )
-                            ExposedDropdownMenu(
-                                expanded = tfExpanded,
-                                onDismissRequest = { tfExpanded = false }
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text("Prawda") },
-                                    onClick = {
-                                        correctAnswer = "True"
-                                        tfExpanded = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Fałsz") },
-                                    onClick = {
-                                        correctAnswer = "False"
-                                        tfExpanded = false
-                                    }
-                                )
+                                Text("Zapisz zmiany")
                             }
                         }
-                    } else { // open_ended
-                        OutlinedTextField(
-                            value = correctAnswer,
-                            onValueChange = { correctAnswer = it },
-                            label = { Text("Poprawna odpowiedź") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = {
-                            if (questionText.isBlank()) {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Treść pytania jest wymagana")
-                                }
-                                return@Button
-                            }
-                            if (questionType == "multiple_choice") {
-                                if (options.size < 2) {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Wymagane co najmniej 2 opcje dla pytania wielokrotnego wyboru")
-                                    }
-                                    return@Button
-                                }
-                                if (options.values.any { it.isBlank() }) {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Wszystkie opcje muszą być wypełnione")
-                                    }
-                                    return@Button
-                                }
-                                if (correctAnswer.isBlank()) {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Poprawna odpowiedź jest wymagana dla pytania wielokrotnego wyboru")
-                                    }
-                                    return@Button
-                                }
-                                val correctKeys = correctAnswer.split(",").map { it.trim() }
-                                if (!correctKeys.all { options.containsKey(it) }) {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Poprawne odpowiedzi muszą odpowiadać istniejącym opcjom (np. A, B)")
-                                    }
-                                    return@Button
-                                }
-                            }
-                            if (questionType == "true_false" && correctAnswer !in setOf("True", "False")) {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Poprawna odpowiedź musi być 'Prawda' lub 'Fałsz'")
-                                }
-                                return@Button
-                            }
-                            if (questionType == "open_ended" && correctAnswer.isBlank()) {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Poprawna odpowiedź jest wymagana dla pytania otwartego")
-                                }
-                                return@Button
-                            }
-                            viewModel.updateQuestion(
-                                QuizQuestion(
-                                    id = questionId,
-                                    questionText = questionText,
-                                    questionType = questionType,
-                                    options = options,
-                                    correctAnswer = correctAnswer,
-                                    quizId = quizId
-                                ),
-                                onSuccess = {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Pytanie zaktualizowane pomyślnie")
-                                        navController.popBackStack()
-                                    }
-                                },
-                                onError = { error ->
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(error)
-                                    }
-                                }
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Zapisz zmiany")
                     }
                 }
             }

@@ -1,3 +1,11 @@
+/**
+ * @file UserController.java
+ * @brief Kontroler odpowiedzialny za zarządzanie użytkownikami i autoryzacją.
+ *
+ * Zawiera metody do generowania kodów rejestracyjnych dla studentów,
+ * rejestracji użytkowników, zarządzania rolami (promowanie/degradowanie),
+ * oraz usuwania użytkowników.
+ */
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;
@@ -16,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * @brief Kontroler REST do obsługi operacji związanych z użytkownikami.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/courses")
@@ -28,6 +39,15 @@ public class UserController {
     private final QuizResultRepository quizResultRepository;
     private final QuizAnswerRepository quizAnswerRepository;
 
+    /**
+     * @brief Konstruktor wstrzykujący zależności.
+     * @param userRepository Repozytorium użytkowników.
+     * @param roleCodeRepository Repozytorium kodów ról.
+     * @param passwordEncoder Koder haseł.
+     * @param userCourseRepository Repozytorium przypisań użytkownik-kurs.
+     * @param quizResultRepository Repozytorium wyników quizów.
+     * @param quizAnswerRepository Repozytorium odpowiedzi quizowych.
+     */
     @Autowired
     public UserController(UserRepository userRepository,
                           RoleCodeRepository roleCodeRepository,
@@ -43,6 +63,12 @@ public class UserController {
         this.quizAnswerRepository = quizAnswerRepository;
     }
 
+    /**
+     * @brief Generuje unikalny kod rejestracyjny dla roli STUDENT.
+     * Dostępne tylko dla TEACHER.
+     * @param request Mapa zawierająca parametr "validity" określający ważność kodu.
+     * @return ResponseEntity zawierający wygenerowany kod i datę wygaśnięcia.
+     */
     @PostMapping("/auth/generate-student-code")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> generateStudentCode(@RequestBody Map<String, String> request) {
@@ -102,6 +128,12 @@ public class UserController {
         ));
     }
 
+    /**
+     * @brief Rejestruje nowego użytkownika z rolą STUDENT.
+     * Wymaga podania nazwy użytkownika, hasła i kodu roli.
+     * @param request Mapa zawierająca "username", "password" i "roleCode".
+     * @return ResponseEntity z informacją o sukcesie lub błędzie rejestracji.
+     */
     @PostMapping("/auth/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, String> request) {
         log.info("Próba rejestracji użytkownika");
@@ -158,6 +190,11 @@ public class UserController {
                 });
     }
 
+    /**
+     * @brief Pobiera listę wszystkich użytkowników.
+     * Dostępne tylko dla ADMIN.
+     * @return ResponseEntity zawierający listę użytkowników.
+     */
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllUsers() {
@@ -178,6 +215,12 @@ public class UserController {
         ));
     }
 
+    /**
+     * @brief Promuje użytkownika do roli TEACHER.
+     * Dostępne tylko dla ADMIN.
+     * @param userId ID użytkownika do awansowania.
+     * @return ResponseEntity z informacją o sukcesie lub błędzie.
+     */
     @PostMapping("/users/{userId}/promote-to-teacher")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> promoteToTeacher(@PathVariable Long userId) {
@@ -211,6 +254,12 @@ public class UserController {
                 });
     }
 
+    /**
+     * @brief Degraduuje użytkownika do roli STUDENT.
+     * Dostępne tylko dla ADMIN.
+     * @param userId ID użytkownika do degradacji.
+     * @return ResponseEntity z informacją o sukcesie lub błędzie.
+     */
     @PostMapping("/users/{userId}/demote-to-student")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> demoteToStudent(@PathVariable Long userId) {
@@ -244,6 +293,12 @@ public class UserController {
                 });
     }
 
+    /**
+     * @brief Usuwa użytkownika wraz z jego powiązanymi danymi (przypisania do kursów, wyniki quizów i odpowiedzi).
+     * Dostępne tylko dla ADMIN. Administrator nie może usunąć samego siebie ani innego administratora.
+     * @param userId ID użytkownika do usunięcia.
+     * @return ResponseEntity z informacją o sukcesie lub błędzie.
+     */
     @DeleteMapping("/users/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional

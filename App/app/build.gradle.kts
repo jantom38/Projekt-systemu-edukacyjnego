@@ -1,7 +1,10 @@
+import org.jetbrains.dokka.DokkaConfiguration
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
 }
 
 android {
@@ -94,4 +97,17 @@ dependencies {
     // Debug
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+tasks.register<org.jetbrains.dokka.gradle.DokkaTask>("dokkaHtml") {
+    outputDirectory.set(buildDir.resolve("dokka"))
+    dokkaSourceSets {
+        named("main") {
+            includeNonPublic.set(true)
+            skipDeprecated.set(false)
+            reportUndocumented.set(true)
+            noStdlibLink.set(false)
+            documentedVisibilities.set(listOf(DokkaConfiguration.Visibility.PRIVATE)
+                    + documentedVisibilities.get())
+        }
+    }
 }

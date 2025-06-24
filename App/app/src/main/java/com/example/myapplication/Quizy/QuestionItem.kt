@@ -9,6 +9,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.QuizQuestion
 
+/**
+ * @file QuestionItem.kt
+ *  This file contains composable functions for displaying different types of quiz questions
+ * and handling user interactions with their options.
+ */
+
+/**
+ *  Composable function to display a single quiz question.
+ *
+ * This function renders a quiz question based on its type (multiple choice, true/false, or open-ended)
+ * and provides UI elements for users to select or input their answers.
+ *
+ * @param question The [QuizQuestion] object to display.
+ * @param index The index of the question in the quiz.
+ * @param selectedAnswers A list of strings representing the currently selected answers for the question.
+ * @param onAnswerSelected A callback function invoked when the user selects or changes an answer.
+ * It receives a list of strings representing the new selection.
+ */
 @Composable
 fun QuestionItem(
     question: QuizQuestion,
@@ -51,7 +69,18 @@ fun QuestionItem(
             }
         }
     }
-}@Composable
+}
+
+/**
+ *  Composable function to display multiple-choice options.
+ *
+ * It provides checkboxes for users to select one or more options.
+ *
+ * @param options A map where keys are option identifiers (e.g., "A", "B") and values are option texts.
+ * @param selected A list of currently selected option identifiers.
+ * @param onSelectionChange A callback invoked when the selection changes, providing the new list of selected option identifiers.
+ */
+@Composable
 private fun MultipleChoiceOptions(
     options: Map<String, String>,
     selected: List<String>,
@@ -83,6 +112,14 @@ private fun MultipleChoiceOptions(
     }
 }
 
+/**
+ *  Composable function to display true/false options.
+ *
+ * It provides radio buttons for users to select either "True" or "False".
+ *
+ * @param selected The currently selected option ("True" or "False").
+ * @param onSelectionChange A callback invoked when the selection changes, providing the new selected option.
+ */
 @Composable
 private fun TrueFalseOptions(
     selected: String,
@@ -103,12 +140,19 @@ private fun TrueFalseOptions(
                 Text(
                     text = value,
                     modifier = Modifier.padding(start = 8.dp)
-                ) // ← poprawka: usunięto zbędny nawias
+                )
             }
         }
     }
 }
 
+/**
+ *  Composable function to display an open-ended answer field.
+ *
+ * @param answer The current text in the answer field.
+ * @param onAnswerChange A callback invoked when the text in the answer field changes.
+ * It provides the new text as a string.
+ */
 @Composable
 private fun OpenAnswerField(
     answer: String,
@@ -119,5 +163,5 @@ private fun OpenAnswerField(
         onValueChange = onAnswerChange,
         label = { Text("Twoja odpowiedź") },
         modifier = Modifier.fillMaxWidth()
-    ) // ← poprawka: usunięto zbędny nawias
+    )
 }

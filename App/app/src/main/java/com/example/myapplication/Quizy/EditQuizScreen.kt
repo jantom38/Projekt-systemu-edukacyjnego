@@ -26,6 +26,17 @@ import com.example.myapplication.RetrofitClient
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
+/**
+ * @file EditQuizScreen.kt
+ *  This file contains the ViewModel and Composable for the Edit Quiz screen.
+ */
+
+/**
+ *  ViewModel for the EditQuizScreen.
+ * Handles fetching, updating, and deleting quiz data and questions.
+ * @param context The Android context.
+ * @param quizId The ID of the quiz to be edited.
+ */
 class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel() {
     private val _quiz = mutableStateOf<Quiz?>(null)
     val quiz: State<Quiz?> = _quiz
@@ -42,6 +53,10 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
         loadQuiz()
     }
 
+    /**
+     *  Loads the quiz data from the API.
+     * Updates [_quiz], [_isLoading], and [_error] states based on the API response.
+     */
     fun loadQuiz() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -72,6 +87,12 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
         }
     }
 
+    /**
+     *  Updates the quiz details via the API.
+     * @param quiz The updated Quiz object.
+     * @param onSuccess Callback function to be invoked on successful update.
+     * @param onError Callback function to be invoked with an error message on failure.
+     */
     fun updateQuiz(quiz: Quiz, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -103,6 +124,13 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
         }
     }
 
+    /**
+     *  Deletes a question from the quiz via the API.
+     * After successful deletion, it reloads the quiz data.
+     * @param questionId The ID of the question to delete.
+     * @param onSuccess Callback function to be invoked on successful deletion.
+     * @param onError Callback function to be invoked with an error message on failure.
+     */
     fun deleteQuestion(questionId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -135,6 +163,12 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
     }
 }
 
+/**
+ *  Composable function for the Edit Quiz screen.
+ * Allows users to edit quiz details and manage its questions.
+ * @param navController The NavHostController for navigation.
+ * @param quizId The ID of the quiz to be edited.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditQuizScreen(navController: NavHostController, quizId: Long) {

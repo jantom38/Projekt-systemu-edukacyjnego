@@ -1,7 +1,6 @@
 package org.example;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.Logger;
 import org.example.DataBaseRepositories.CourseFileRepository;
 import org.example.DataBaseRepositories.CourseRepository;
 import org.example.database.Course;
@@ -21,51 +20,69 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Kontroler odpowiedzialny za obsługę operacji przesyłania plików na serwer.
+ * Umożliwia nauczycielom i administratorom przesyłanie plików do konkretnych kursów.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/courses/{courseId}/files")
 public class FileUploadController {
 
+    /**
+     * Ścieżka do katalogu, gdzie przechowywane są przesyłane pliki.
+     * Wartość domyślna to "uploads" w katalogu użytkownika, ale może być nadpisana
+     * przez właściwość `file.upload-dir` w `application.properties`.
+     */
     @Value("${file.upload-dir:#{systemProperties['user.dir'] + '/uploads'}}")
     private String uploadDir;
 
+    /**
+     * Repozytorium do zarządzania encjami CourseFile w bazie danych.
+     */
     @Autowired
     private CourseFileRepository courseFileRepository;
 
+    /**
+     * Repozytorium do zarządzania encjami Course w bazie danych.
+     */
     @Autowired
     private CourseRepository courseRepository;
 
-
+    /**
+     * Obsługuje żądania przesyłania plików dla danego kursu.
+     * Plik jest zapisywany na dysku, a jego metadane są zapisywane w bazie danych.
+     * Wymaga roli TEACHER lub ADMIN.
+     *
+     * @param courseId Identyfikator kursu, do którego plik ma zostać przypisany.
+     * @param file Przesyłany plik typu MultipartFile.
+     * @return ResponseEntity zawierający status operacji i dane przesłanego pliku,
+     * lub status błędu w przypadku niepowodzenia.
+     */
     @PostMapping("/upload")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
-    public ResponseEntity<?> uploadFile(
-            @PathVariable Long courseId,
-            @RequestParam("file") MultipartFile file) {
-
-
-        log.info("Starting file upload for course ID: {}", courseId);
-
+    public ResponseEntity<?> uploadFile(@PathVariable Long courseId,
+                                        @RequestParam("file") MultipartFile file) {
         try {
-            // 1. Walidacja kursu
+            // 1. Sprawdzenie, czy katalog istnieje i ewentualne utworzenie
+            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Files.createDirectories(uploadPath); // Tworzy katalogi, jeśli nie istnieją
+            log.info("Upload directory ensured: {}", uploadPath);
+
+            // 2. Pobranie kursu
             Course course = courseRepository.findById(courseId)
-                    .orElseThrow(() -> new RuntimeException("Course not found"));
+                    .orElseThrow(() -> new RuntimeException("Course not found with ID: " + courseId));
+            log.info("Found course: {}", course.getCourseName());
 
-            // 2. Walidacja pliku
+            // 3. Sprawdzenie, czy plik jest pusty
             if (file.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("success", false, "message", "File is empty"));
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "File is empty"));
             }
+            log.info("Received file: {}", file.getOriginalFilename());
 
-            // 3. Przygotowanie katalogu
-            Path uploadPath = Paths.get(uploadDir).toAbsolutePath();
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            // 4. Poprawione generowanie nazwy pliku
+            // 4. Generowanie unikalnej nazwy pliku
             String originalFileName = file.getOriginalFilename();
             String fileExtension = "";
-
             if (originalFileName != null && originalFileName.contains(".")) {
                 fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
             }

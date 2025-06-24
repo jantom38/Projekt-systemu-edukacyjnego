@@ -25,17 +25,33 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import retrofit2.Response
 
-// ViewModel do zarządzania użytkownikami kursu
+/**
+ * @file CourseUsersScreen.kt
+ * Ten plik zawiera ViewModel [CourseUsersViewModel] do zarządzania użytkownikami kursu
+ * oraz kompozycyjną funkcję ekranu [CourseUsersScreen] do wyświetlania i usuwania użytkowników z kursu.
+ */
+
+/**
+ * ViewModel do zarządzania użytkownikami kursu.
+ * Udostępnia funkcje do ładowania listy użytkowników kursu oraz ich usuwania.
+ *
+ * @param context Kontekst aplikacji, wymagany do inicjalizacji RetrofitClient.
+ * @param courseId Identyfikator kursu, dla którego zarządzani są użytkownicy.
+ */
 class CourseUsersViewModel(
     context: Context,
     private val courseId: Long
 ) : ViewModel() {
+    /** Instancja RetrofitClient do komunikacji z API.*/
     private val api = RetrofitClient.getInstance(context)
 
+    /** Lista użytkowników przypisanych do kursu.*/
     var users by mutableStateOf<List<UserCourseInfo>>(emptyList())
         private set
+    /** Stan ładowania danych. True, jeśli dane są aktualnie ładowane, w przeciwnym razie false.*/
     var isLoading by mutableStateOf(false)
         private set
+    /** Wiadomość o błędzie, jeśli wystąpi problem podczas ładowania danych. Null, jeśli brak błędów.*/
     var error by mutableStateOf<String?>(null)
         private set
 
@@ -43,14 +59,18 @@ class CourseUsersViewModel(
         loadUsers()
     }
 
+    /**
+     * Ładuje listę użytkowników przypisanych do danego kursu z API.
+     * Obsługuje stany ładowania i błędy.
+     */
     fun loadUsers() {
         viewModelScope.launch {
             isLoading = true
             error = null
             try {
-                val resp = api.getCourseUsers(courseId) //
-                if (resp.success) { //
-                    users = resp.users //
+                val resp = api.getCourseUsers(courseId)
+                if (resp.success) {
+                    users = resp.users
                 } else {
                     error = "Błąd serwera"
                 }
@@ -64,6 +84,14 @@ class CourseUsersViewModel(
         }
     }
 
+    /**
+     * Usuwa użytkownika z kursu.
+     * Po pomyślnym usunięciu odświeża listę użytkowników.
+     *
+     * @param userId Identyfikator użytkownika do usunięcia.
+     * @param onSuccess Funkcja wywoływana po pomyślnym usunięciu użytkownika.
+     * @param onError Funkcja wywoływana w przypadku błędu, z komunikatem o błędzie.
+     */
     fun removeUser(
         userId: Long,
         onSuccess: () -> Unit,
@@ -71,10 +99,10 @@ class CourseUsersViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val res: Response<GenericResponse> = api.removeUserFromCourse(courseId, userId) //
-                if (res.isSuccessful && res.body()?.success == true) { //
+                val res: Response<GenericResponse> = api.removeUserFromCourse(courseId, userId)
+                if (res.isSuccessful && res.body()?.success == true) {
                     onSuccess()
-                    loadUsers() // Ponownie ładuje użytkowników po pomyślnym usunięciu
+                    loadUsers()
                 } else {
                     onError(res.body()?.message ?: "Nie udało się usunąć użytkownika")
                 }
@@ -86,33 +114,44 @@ class CourseUsersViewModel(
         }
     }
 
+    /**
+     * Fabryka do tworzenia instancji [CourseUsersViewModel].
+     * Wymagana do przekazywania argumentów do ViewModelu.
+     */
     class Factory(
         private val context: Context,
         private val courseId: Long
     ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST")
             return CourseUsersViewModel(context, courseId) as T
         }
     }
 }
 
-// Composable do wyświetlania i zarządzania użytkownikami
+/**
+ * Kompozycyjna funkcja ekranu zarządzania użytkownikami kursu.
+ * Wyświetla listę użytkowników kursu i umożliwia ich usuwanie.
+ *
+ * @param navController Kontroler nawigacji do obsługi przejść między ekranami.
+ * @param courseId Identyfikator kursu, dla którego wyświetlani są użytkownicy.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseUsersScreen(
     navController: NavHostController,
     courseId: Long
 ) {
-    val context = LocalContext.current //
+    val context = LocalContext.current
     val viewModel: CourseUsersViewModel = viewModel(
         factory = CourseUsersViewModel.Factory(context, courseId)
     )
-    val snackbarHostState = remember { SnackbarHostState() } //
-    val scope = rememberCoroutineScope() //
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-    // Stany do zarządzania oknem dialogowym potwierdzenia
+    /** Stan do zarządzania widocznością okna dialogowego potwierdzenia.*/
     var showConfirmationDialog by remember { mutableStateOf(false) }
+    /** Identyfikator użytkownika do usunięcia, null jeśli żaden nie jest wybrany.*/
     var userIdToRemove by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
@@ -126,25 +165,26 @@ fun CourseUsersScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) } //
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            /** Obsługa stanów ładowania i błędów.*/
             when {
-                viewModel.isLoading -> { //
+                viewModel.isLoading -> {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 }
-                viewModel.error != null -> { //
+                viewModel.error != null -> {
                     Column(
                         Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(viewModel.error!!, color = MaterialTheme.colorScheme.error) //
+                        Text(viewModel.error!!, color = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadUsers() }) { //
+                        Button(onClick = { viewModel.loadUsers() }) {
                             Text("Spróbuj ponownie")
                         }
                     }
@@ -154,7 +194,7 @@ fun CourseUsersScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(viewModel.users) { user -> //
+                        items(viewModel.users) { user ->
                             Card(Modifier.fillMaxWidth()) {
                                 Row(
                                     Modifier
@@ -164,12 +204,11 @@ fun CourseUsersScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        Text(user.username, style = MaterialTheme.typography.titleMedium) //
-                                        Text("Rola: ${user.role}", style = MaterialTheme.typography.bodySmall) //
-                                        Text("Dołączył: ${user.joinedAt}", style = MaterialTheme.typography.bodySmall) //
+                                        Text(user.username, style = MaterialTheme.typography.titleMedium)
+                                        Text("Rola: ${user.role}", style = MaterialTheme.typography.bodySmall)
+                                        Text("Dołączył: ${user.joinedAt}", style = MaterialTheme.typography.bodySmall)
                                     }
                                     IconButton(onClick = {
-                                        // Ustaw ID użytkownika i pokaż dialog
                                         userIdToRemove = user.id
                                         showConfirmationDialog = true
                                     }) {
@@ -186,7 +225,7 @@ fun CourseUsersScreen(
                 }
             }
 
-            // Okno dialogowe potwierdzenia
+            /** Okno dialogowe potwierdzenia usunięcia użytkownika.*/
             if (showConfirmationDialog) {
                 AlertDialog(
                     onDismissRequest = {
@@ -199,11 +238,10 @@ fun CourseUsersScreen(
                         Button(
                             onClick = {
                                 userIdToRemove?.let { id ->
-                                    viewModel.removeUser( //
+                                    viewModel.removeUser(
                                         userId = id,
                                         onSuccess = {
                                             scope.launch { snackbarHostState.showSnackbar("Użytkownik został usunięty.") }
-                                            // viewModel.loadUsers() jest już wywoływane w onSuccess w ViewModelu
                                         },
                                         onError = { msg ->
                                             scope.launch { snackbarHostState.showSnackbar("Błąd: $msg") }

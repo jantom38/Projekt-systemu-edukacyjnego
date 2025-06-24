@@ -1,3 +1,10 @@
+/**
+ * @file QuizResultController.java
+ * @brief Kontroler odpowiedzialny za zarządzanie wynikami quizów.
+ *
+ * Zawiera metody do przesyłania odpowiedzi na quiz, pobierania wyników,
+ * szczegółowych wyników dla nauczycieli/adminów oraz generowania raportów PDF.
+ */
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;
@@ -12,6 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayInputStream;
@@ -19,6 +27,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * @brief Kontroler REST do obsługi operacji związanych z wynikami quizów.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/courses")
@@ -29,9 +40,17 @@ public class QuizResultController {
     private final QuizResultRepository quizResultRepository;
     private final QuizAnswerRepository quizAnswerRepository;
     private final UserRepository userRepository;
-    private final PdfGenerationService pdfGenerationService; // Wstrzyknij serwis
+    private final PdfGenerationService pdfGenerationService;
 
-
+    /**
+     * @brief Konstruktor wstrzykujący zależności.
+     * @param quizRepository Repozytorium quizów.
+     * @param quizQuestionRepository Repozytorium pytań quizowych.
+     * @param quizResultRepository Repozytorium wyników quizów.
+     * @param quizAnswerRepository Repozytorium odpowiedzi quizowych.
+     * @param userRepository Repozytorium użytkowników.
+     * @param pdfGenerationService Serwis do generowania PDF.
+     */
     @Autowired
     public QuizResultController(QuizRepository quizRepository,
                                 QuizQuestionRepository quizQuestionRepository,
@@ -46,20 +65,45 @@ public class QuizResultController {
         this.pdfGenerationService = pdfGenerationService;
     }
 
+    /**
+     * @brief Waliduje odpowiedź dla pytania wielokrotnego wyboru.
+     * @param question Obiekt pytania quizowego.
+     * @param answer Odpowiedź użytkownika.
+     * @return true jeśli odpowiedź jest poprawna, false w przeciwnym razie.
+     */
     private boolean validateMultipleChoice(QuizQuestion question, String answer) {
         Set<String> correctAnswers = Set.of(question.getCorrectAnswer().split(","));
         Set<String> userAnswers = Set.of(answer.split(","));
         return correctAnswers.equals(userAnswers);
     }
 
+    /**
+     * @brief Waliduje odpowiedź dla pytania typu prawda/fałsz.
+     * @param question Obiekt pytania quizowego.
+     * @param answer Odpowiedź użytkownika.
+     * @return true jeśli odpowiedź jest poprawna, false w przeciwnym razie.
+     */
     private boolean validateTrueFalse(QuizQuestion question, String answer) {
         return question.getCorrectAnswer().equalsIgnoreCase(answer);
     }
 
+    /**
+     * @brief Waliduje odpowiedź dla pytania otwartego.
+     * @param question Obiekt pytania quizowego.
+     * @param answer Odpowiedź użytkownika.
+     * @return true jeśli odpowiedź jest poprawna, false w przeciwnym razie.
+     */
     private boolean validateOpenEnded(QuizQuestion question, String answer) {
         return answer.trim().equalsIgnoreCase(question.getCorrectAnswer().trim());
     }
 
+    /**
+     * @brief Waliduje odpowiedź użytkownika w zależności od typu pytania.
+     * @param answer Obiekt DTO zawierający ID pytania i odpowiedź użytkownika.
+     * @return true jeśli odpowiedź jest poprawna, false w przeciwnym razie.
+     * @throws RuntimeException jeśli pytanie nie zostanie znalezione.
+     * @throws IllegalArgumentException jeśli typ pytania jest nieznany.
+     */
     private boolean validateAnswer(QuizAnswerDTO answer) {
         try {
             QuizQuestion question = quizQuestionRepository.findById(answer.questionId())
@@ -83,6 +127,12 @@ public class QuizResultController {
         }
     }
 
+    /**
+     * @brief Przetwarza przesłane odpowiedzi na quiz.
+     * @param quizId ID quizu.
+     * @param answers Lista odpowiedzi użytkownika.
+     * @return ResponseEntity zawierający wynik przesłania quizu.
+     */
     @PostMapping("/quizzes/{quizId}/submit")
     public ResponseEntity<?> submitQuizAnswers(
             @PathVariable Long quizId,
@@ -158,6 +208,11 @@ public class QuizResultController {
         }
     }
 
+    /**
+     * @brief Pobiera wyniki quizu dla aktualnie zalogowanego użytkownika.
+     * @param quizId ID quizu.
+     * @return ResponseEntity zawierający wyniki quizu.
+     */
     @GetMapping("/quizzes/{quizId}/results")
     public ResponseEntity<?> getQuizResults(@PathVariable Long quizId) {
         Long userId = Utils.getCurrentUserId(userRepository);
@@ -202,6 +257,11 @@ public class QuizResultController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * @brief Pobiera szczegółowe wyniki dla danego quizu (dostępne tylko dla TEACHER/ADMIN).
+     * @param quizId ID quizu.
+     * @return ResponseEntity zawierający szczegółowe wyniki quizu.
+     */
     @GetMapping("/quizzes/{quizId}/detailed-results")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<?> getQuizDetailedResults(@PathVariable Long quizId) {
@@ -258,6 +318,12 @@ public class QuizResultController {
                             "message", "Quiz nie znaleziony"));
                 });
     }
+
+    /**
+     * @brief Usuwa wynik quizu (dostępne tylko dla TEACHER/ADMIN).
+     * @param resultId ID wyniku quizu do usunięcia.
+     * @return ResponseEntity z informacją o sukcesie lub błędzie.
+     */
     @DeleteMapping("/quizzes/results/{resultId}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     @Transactional
@@ -265,20 +331,27 @@ public class QuizResultController {
         Long currentUserId = Utils.getCurrentUserId(userRepository);
         log.info("Użytkownik {} próbuje usunąć wynik quizu o ID: {}", currentUserId, resultId);
 
+        // Pobranie obiektu Authentication z Twojej klasy Utils
+        Authentication authentication = Utils.getAuthentication();
+
+        // Wykorzystanie istniejącej funkcji z Utils.java do sprawdzenia roli ADMIN
+        boolean isAdmin = Utils.isAdmin(authentication);
+
         return quizResultRepository.findById(resultId)
                 .map(result -> {
-                    // Weryfikacja uprawnień - czy nauczyciel jest właścicielem kursu
                     String teacherUsername = result.getQuiz().getCourse().getTeacher().getUsername();
-                    if (!Utils.isTeacher(Utils.getAuthentication()) || !teacherUsername.equals(Utils.currentUsername())) {
-                        log.warn("Brak uprawnień do usunięcia wyniku ID: {}", resultId);
+
+                    // Warunek pozostaje ten sam: zablokuj, jeśli użytkownik NIE jest adminem ORAZ nie jest właściwym nauczycielem
+                    if (!isAdmin && (!Utils.isTeacher(authentication) || !teacherUsername.equals(Utils.currentUsername()))) {
+                        log.warn("Brak uprawnień do usunięcia wyniku ID: {}. Użytkownik nie jest adminem ani właścicielem kursu.", resultId);
                         return ResponseEntity.status(403).body(Map.of("success", false, "message", "Brak uprawnień"));
                     }
 
-                    // Najpierw usuń powiązane odpowiedzi, potem wynik
+                    // Logika usuwania - dostępna dla admina lub właściwego nauczyciela
                     quizAnswerRepository.deleteByQuizResultId(resultId);
                     quizResultRepository.delete(result);
 
-                    log.info("Wynik quizu ID: {} został pomyślnie usunięty.", resultId);
+                    log.info("Wynik quizu ID: {} został pomyślnie usunięty przez użytkownika {}.", resultId, Utils.currentUsername());
                     return ResponseEntity.ok(Map.of("success", true, "message", "Wynik został usunięty."));
                 })
                 .orElseGet(() -> {
@@ -286,7 +359,11 @@ public class QuizResultController {
                     return ResponseEntity.status(404).body(Map.of("success", false, "message", "Wynik nie znaleziony."));
                 });
     }
-
+    /**
+     * @brief Generuje i pobiera raport PDF ze szczegółowymi wynikami quizu (dostępne tylko dla TEACHER/ADMIN).
+     * @param quizId ID quizu.
+     * @return ResponseEntity zawierający strumień danych PDF.
+     */
     @GetMapping("/quizzes/{quizId}/detailed-results/pdf")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<InputStreamResource> downloadQuizResultsPdf(@PathVariable Long quizId) {
@@ -294,7 +371,6 @@ public class QuizResultController {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new RuntimeException("Quiz nie znaleziony"));
 
-        // Sprawdzenie uprawnień
         if (Utils.isTeacher(Utils.getAuthentication()) &&
                 !quiz.getCourse().getTeacher().getUsername().equals(Utils.currentUsername())) {
             log.warn("Nauczyciel {} próbował pobrać PDF dla quizu ID: {} bez uprawnień", Utils.currentUsername(), quizId);
@@ -302,7 +378,6 @@ public class QuizResultController {
         }
 
         List<QuizResult> results = quizResultRepository.findByQuizId(quizId);
-        // Pobieramy odpowiedzi dla każdego wyniku, aby były dostępne w serwisie PDF
         results.forEach(result -> result.setQuizAnswers(quizAnswerRepository.findByQuizResultIdWithQuestions(result.getId())));
 
 
