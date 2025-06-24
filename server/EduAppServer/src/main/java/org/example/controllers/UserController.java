@@ -1,11 +1,4 @@
-/**
- * @file UserController.java
- * @brief Kontroler odpowiedzialny za zarządzanie użytkownikami i autoryzacją.
- *
- * Zawiera metody do generowania kodów rejestracyjnych dla studentów,
- * rejestracji użytkowników, zarządzania rolami (promowanie/degradowanie),
- * oraz usuwania użytkowników.
- */
+
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;

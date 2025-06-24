@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
+ * @brief
  * Główna klasa startowa aplikacji Spring Boot.
  * Odpowiedzialna za uruchomienie kontekstu Spring i zainicjowanie wszystkich komponentów.
  */

@@ -3,6 +3,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 /**
+ * @brief
  * Klasa encji reprezentująca kurs.
  * Mapowana jest do tabeli "Courses" w bazie danych.
  */

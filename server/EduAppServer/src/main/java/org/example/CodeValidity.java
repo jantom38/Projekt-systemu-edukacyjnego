@@ -1,6 +1,7 @@
 package org.example;
 
 /**
+ * @brief
  * Enumeracja definiująca predefiniowane czasy ważności dla kodów rejestracyjnych.
  * Każda wartość przechowuje swój tekstowy identyfikator i odpowiadającą mu liczbę godzin ważności.
  */

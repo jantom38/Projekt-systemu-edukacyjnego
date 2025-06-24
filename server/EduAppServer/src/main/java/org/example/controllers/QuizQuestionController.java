@@ -1,10 +1,4 @@
-/**
- * @file QuizQuestionController.java
- * @brief Kontroler odpowiedzialny za zarządzanie pytaniami quizowymi w systemie.
- *
- * Udostępnia endpointy do dodawania, aktualizowania, usuwania oraz pobierania pytań quizowych,
- * a także pobierania dostępnych quizów i szczegółów quizów do edycji lub rozwiązywania.
- */
+
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;

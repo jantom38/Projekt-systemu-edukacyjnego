@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 /**
+ * @brief
  * Usługa implementująca interfejs UserDetailsService z Spring Security.
  * Odpowiedzialna za ładowanie danych użytkownika na podstawie jego nazwy.
  */

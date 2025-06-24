@@ -18,6 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
+ * @brief
  * Usługa odpowiedzialna za generowanie raportów PDF z wynikami quizów.
  * Wykorzystuje bibliotekę iText7 do tworzenia dokumentów PDF.
  */

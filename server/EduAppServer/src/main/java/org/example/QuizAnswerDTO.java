@@ -2,6 +2,7 @@
 package org.example.dto;
 
 /**
+ * @brief
  * Rekord DTO (Data Transfer Object) reprezentujący odpowiedź użytkownika na pojedyncze pytanie quizu.
  * Używany do przenoszenia danych odpowiedzi z klienta do serwera.
  *

@@ -1,6 +1,7 @@
 package org.example;
 
 /**
+ * @brief
  * Klasa główna, która służy jako punkt wejścia do uruchomienia aplikacji Spring Boot.
  * Po prostu wywołuje metodę main z LoginModule.
  */

@@ -31,14 +31,14 @@ import java.util.UUID
 
 /**
  * @file AdminTeacherScreen.kt
- *  This file contains the Composable function for the Admin/Teacher screen, allowing management of users, course groups, and registration codes.
+ * Plik zawiera funkcję Composable dla ekranu administratora/nauczyciela, umożliwiającą zarządzanie użytkownikami, grupami kursów i kodami rejestracyjnymi.
  */
 
 /**
- *  Composable function for the Admin and Teacher functionalities screen.
- * This screen allows administrators and teachers to manage users (promote/demote, delete),
- * manage course groups (create, delete, duplicate courses within groups), and generate student registration codes.
- * @param navController The NavHostController used for navigating between screens.
+ * Funkcja Composable dla ekranu funkcjonalności administratora i nauczyciela.
+ * Ten ekran umożliwia administratorom i nauczycielom zarządzanie użytkownikami (awansowanie/degradacja, usuwanie),
+ * zarządzanie grupami kursów (tworzenie, usuwanie, duplikowanie kursów w grupach) oraz generowanie kodów rejestracyjnych dla studentów.
+ * @param navController Kontroler nawigacji używany do przechodzenia między ekranami.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,9 +67,9 @@ fun AdminTeacherScreen(navController: NavHostController) {
     val viewModel: SystemUsersViewModel = viewModel(factory = SystemUsersViewModel.Factory(context))
 
     /**
-     *  Formats an ISO date-time string into a more readable localized format.
-     * @param isoDateTime The ISO date-time string to format.
-     * @return A formatted date-time string, or "Nieznana data" if the input is null or invalid.
+     * Formatuje ciąg daty i czasu w formacie ISO na bardziej czytelny format zlokalizowany.
+     * @param isoDateTime Ciąg daty i czasu w formacie ISO do sformatowania.
+     * @return Sformatowany ciąg daty i czasu lub "Nieznana data", jeśli wejście jest null lub nieprawidłowe.
      */
     fun formatExpiresAt(isoDateTime: String?): String {
         if (isoDateTime == null) return "Nieznana data"
@@ -85,8 +85,8 @@ fun AdminTeacherScreen(navController: NavHostController) {
     }
 
     /**
-     *  Generates a student registration code by calling the API.
-     * Updates the [generatedCode] and [expiresAt] states upon success, or shows a Snackbar on error.
+     * Generuje kod rejestracyjny dla studenta poprzez wywołanie API.
+     * Aktualizuje stany [generatedCode] i [expiresAt] w przypadku powodzenia lub wyświetla Snackbar w przypadku błędu.
      */
     fun generateStudentCode() {
         isGenerating = true
@@ -116,8 +116,8 @@ fun AdminTeacherScreen(navController: NavHostController) {
     }
 
     /**
-     *  Loads the list of course groups from the API.
-     * Updates the [courseGroups] state upon success, or shows a Snackbar on error.
+     * Pobiera listę grup kursów z API.
+     * Aktualizuje stan [courseGroups] w przypadku powodzenia lub wyświetla Snackbar w przypadku błędu.
      */
     fun loadCourseGroups() {
         scope.launch(Dispatchers.IO) {
@@ -140,8 +140,8 @@ fun AdminTeacherScreen(navController: NavHostController) {
     }
 
     /**
-     *  Loads the list of all users from the API.
-     * Updates the [users] and [isLoading] states based on the API response.
+     * Pobiera listę wszystkich użytkowników z API.
+     * Aktualizuje stany [users] i [isLoading] na podstawie odpowiedzi z API.
      */
     fun loadUsers() {
         scope.launch(Dispatchers.IO) {
@@ -167,10 +167,10 @@ fun AdminTeacherScreen(navController: NavHostController) {
     }
 
     /**
-     *  Promotes a user to a teacher role via the API.
-     * Reloads the user list on success, or shows a Snackbar on error.
-     * @param userId The ID of the user to promote.
-     * @param username The username of the user to promote (for display purposes).
+     * Awansuje użytkownika na rolę nauczyciela poprzez API.
+     * Odświeża listę użytkowników w przypadku powodzenia lub wyświetla Snackbar w przypadku błędu.
+     * @param userId Identyfikator użytkownika do awansowania.
+     * @param username Nazwa użytkownika do awansowania (do celów wyświetlania).
      */
     fun promoteToTeacher(userId: Long, username: String) {
         scope.launch(Dispatchers.IO) {
@@ -194,10 +194,10 @@ fun AdminTeacherScreen(navController: NavHostController) {
     }
 
     /**
-     *  Demotes a user to a student role via the API.
-     * Reloads the user list on success, or shows a Snackbar on error.
-     * @param userId The ID of the user to demote.
-     * @param username The username of the user to demote (for display purposes).
+     * Degraduje użytkownika do roli studenta poprzez API.
+     * Odświeża listę użytkowników w przypadku powodzenia lub wyświetla Snackbar w przypadku błędu.
+     * @param userId Identyfikator użytkownika do degradacji.
+     * @param username Nazwa użytkownika do degradacji (do celów wyświetlania).
      */
     fun demoteToStudent(userId: Long, username: String) {
         scope.launch(Dispatchers.IO) {

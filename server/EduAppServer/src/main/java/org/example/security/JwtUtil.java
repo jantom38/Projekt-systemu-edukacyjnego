@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.util.Date;
 
 /**
+ * @brief
  * Klasa narzędziowa do generowania, walidacji i parsowania tokenów JWT.
  */
 @Component

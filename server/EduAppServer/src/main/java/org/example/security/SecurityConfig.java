@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
+ * @brief
  * Klasa konfiguracji bezpieczeństwa dla aplikacji Spring Boot.
  * Definiuje reguły autoryzacji HTTP, zarządzanie sesjami oraz konfiguruje filtry JWT.
  */

@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
+ * @brief
  * Kontroler odpowiedzialny za obsługę operacji przesyłania plików na serwer.
  * Umożliwia nauczycielom i administratorom przesyłanie plików do konkretnych kursów.
  */

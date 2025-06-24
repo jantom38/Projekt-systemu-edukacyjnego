@@ -1,10 +1,4 @@
-/**
- * @file CourseController.java
- * @brief Kontroler odpowiedzialny za zarządzanie kursami w systemie.
- *
- * Udostępnia endpointy do tworzenia, usuwania i zarządzania kursami,
- * weryfikacji kluczy dostępu, zarządzania plikami kursów oraz użytkownikami przypisanymi do kursów.
- */
+
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;

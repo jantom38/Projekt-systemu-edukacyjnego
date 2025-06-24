@@ -11,21 +11,21 @@ import com.example.myapplication.QuizQuestion
 
 /**
  * @file QuestionItem.kt
- *  This file contains composable functions for displaying different types of quiz questions
- * and handling user interactions with their options.
+ * Ten plik zawiera funkcje kompozycyjne do wyświetlania różnych typów pytań quizowych
+ * oraz obsługę interakcji użytkownika z ich opcjami.
  */
 
 /**
- *  Composable function to display a single quiz question.
+ * Funkcja kompozycyjna do wyświetlania pojedynczego pytania quizowego.
  *
- * This function renders a quiz question based on its type (multiple choice, true/false, or open-ended)
- * and provides UI elements for users to select or input their answers.
+ * Ta funkcja renderuje pytanie quizowe na podstawie jego typu (wielokrotnego wyboru, prawda/fałsz lub otwarte)
+ * i udostępnia elementy interfejsu użytkownika, aby użytkownicy mogli wybrać lub wprowadzić swoje odpowiedzi.
  *
- * @param question The [QuizQuestion] object to display.
- * @param index The index of the question in the quiz.
- * @param selectedAnswers A list of strings representing the currently selected answers for the question.
- * @param onAnswerSelected A callback function invoked when the user selects or changes an answer.
- * It receives a list of strings representing the new selection.
+ * @param question Obiekt [QuizQuestion] do wyświetlenia.
+ * @param index Indeks pytania w quizie.
+ * @param selectedAnswers Lista stringów reprezentujących aktualnie wybrane odpowiedzi dla pytania.
+ * @param onAnswerSelected Funkcja zwrotna wywoływana, gdy użytkownik wybierze lub zmieni odpowiedź.
+ * Otrzymuje listę stringów reprezentujących nowy wybór.
  */
 @Composable
 fun QuestionItem(
@@ -72,13 +72,13 @@ fun QuestionItem(
 }
 
 /**
- *  Composable function to display multiple-choice options.
+ * Funkcja kompozycyjna do wyświetlania opcji wielokrotnego wyboru.
  *
- * It provides checkboxes for users to select one or more options.
+ * Udostępnia pola wyboru, aby użytkownicy mogli wybrać jedną lub więcej opcji.
  *
- * @param options A map where keys are option identifiers (e.g., "A", "B") and values are option texts.
- * @param selected A list of currently selected option identifiers.
- * @param onSelectionChange A callback invoked when the selection changes, providing the new list of selected option identifiers.
+ * @param options Mapa, w której klucze to identyfikatory opcji (np. "A", "B"), a wartości to teksty opcji.
+ * @param selected Lista aktualnie wybranych identyfikatorów opcji.
+ * @param onSelectionChange Funkcja zwrotna wywoływana, gdy zmienia się wybór, dostarczająca nową listę wybranych identyfikatorów opcji.
  */
 @Composable
 private fun MultipleChoiceOptions(
@@ -113,12 +113,12 @@ private fun MultipleChoiceOptions(
 }
 
 /**
- *  Composable function to display true/false options.
+ * Funkcja kompozycyjna do wyświetlania opcji prawda/fałsz.
  *
- * It provides radio buttons for users to select either "True" or "False".
+ * Udostępnia przyciski radiowe, aby użytkownicy mogli wybrać "Prawda" lub "Fałsz".
  *
- * @param selected The currently selected option ("True" or "False").
- * @param onSelectionChange A callback invoked when the selection changes, providing the new selected option.
+ * @param selected Aktualnie wybrana opcja ("True" lub "False").
+ * @param onSelectionChange Funkcja zwrotna wywoływana, gdy zmienia się wybór, dostarczająca nowo wybraną opcję.
  */
 @Composable
 private fun TrueFalseOptions(
@@ -147,11 +147,11 @@ private fun TrueFalseOptions(
 }
 
 /**
- *  Composable function to display an open-ended answer field.
+ * Funkcja kompozycyjna do wyświetlania pola odpowiedzi otwartej.
  *
- * @param answer The current text in the answer field.
- * @param onAnswerChange A callback invoked when the text in the answer field changes.
- * It provides the new text as a string.
+ * @param answer Bieżący tekst w polu odpowiedzi.
+ * @param onAnswerChange Funkcja zwrotna wywoływana, gdy zmienia się tekst w polu odpowiedzi.
+ * Dostarcza nowy tekst jako string.
  */
 @Composable
 private fun OpenAnswerField(

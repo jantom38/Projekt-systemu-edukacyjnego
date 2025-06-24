@@ -1,10 +1,4 @@
-/**
- * @file CourseGroupController.java
- * @brief Kontroler odpowiedzialny za zarządzanie grupami kursów w systemie.
- *
- * Udostępnia endpointy do tworzenia, usuwania i zarządzania grupami kursów,
- * zapisywania studentów na kursy poprzez grupy oraz duplikowania kursów w obrębie grup.
- */
+
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;

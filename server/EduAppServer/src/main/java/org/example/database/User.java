@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * @brief
  * Klasa encji reprezentująca użytkownika systemu.
  * Mapowana jest do tabeli "users" w bazie danych.
  */

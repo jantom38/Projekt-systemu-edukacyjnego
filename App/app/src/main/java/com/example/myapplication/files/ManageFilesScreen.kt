@@ -29,25 +29,28 @@ import retrofit2.HttpException
 
 /**
  * @file ManageFilesScreen.kt
- *  This file contains the composable function for managing course files and its associated ViewModel.
+ * Plik zawiera funkcję composable dla ekranu zarządzania plikami kursu oraz powiązany ViewModel.
  */
 
 /**
- *  ViewModel for the ManageFilesScreen.
+ * ViewModel dla ekranu ManageFilesScreen.
  *
- * This ViewModel handles fetching, displaying, and deleting course-related files.
+ * Ten ViewModel odpowiada za pobieranie, wyświetlanie i usuwanie plików związanych z kursem.
  *
- * @param context The application context.
- * @param courseId The ID of the course for which files are being managed.
+ * @param context Kontekst aplikacji.
+ * @param courseId Identyfikator kursu, dla którego zarządzane są pliki.
  */
 class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewModel() {
     private val _files = mutableStateOf<List<CourseFile>>(emptyList())
+    /** Lista plików kursu. */
     val files: State<List<CourseFile>> = _files
 
     private val _isLoading = mutableStateOf(true)
+    /** Flaga wskazująca, czy trwa ładowanie danych. */
     val isLoading: State<Boolean> = _isLoading
 
     private val _error = mutableStateOf<String?>(null)
+    /** Komunikat błędu, jeśli wystąpił problem podczas ładowania danych. */
     val error: State<String?> = _error
 
     private val apiService = RetrofitClient.getInstance(context)
@@ -57,9 +60,9 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
     }
 
     /**
-     *  Loads the list of files for the current course from the API.
+     * Pobiera listę plików dla bieżącego kursu z API.
      *
-     * Updates the [_files], [_isLoading], and [_error] states based on the API response.
+     * Aktualizuje stany [_files], [_isLoading] i [_error] na podstawie odpowiedzi z API.
      */
     fun loadFiles() {
         viewModelScope.launch {
@@ -67,7 +70,7 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
             _error.value = null
             try {
                 _files.value = apiService.getCourseFiles(courseId)
-                Log.d("ManageFiles", "Loaded files: ${_files.value}")
+                Log.d("ManageFiles", "Załadowano pliki: ${_files.value}")
             } catch (e: HttpException) {
                 _error.value = when (e.code()) {
                     401 -> "Brak autoryzacji"
@@ -75,10 +78,10 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
                     404 -> "Kurs nie znaleziony"
                     else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("ManageFiles", "HTTP error", e)
+                Log.e("ManageFiles", "Błąd HTTP", e)
             } catch (e: Exception) {
                 _error.value = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("ManageFiles", "Network error", e)
+                Log.e("ManageFiles", "Błąd sieciowy", e)
             } finally {
                 _isLoading.value = false
             }
@@ -86,11 +89,11 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
     }
 
     /**
-     *  Deletes a specific file from the course.
+     * Usuwa określony plik z kursu.
      *
-     * @param fileId The ID of the file to be deleted.
-     * @param onSuccess Callback to be invoked when the file is successfully deleted.
-     * @param onError Callback to be invoked when an error occurs during file deletion, providing an error message.
+     * @param fileId Identyfikator pliku do usunięcia.
+     * @param onSuccess Funkcja zwrotna wywoływana po pomyślnym usunięciu pliku.
+     * @param onError Funkcja zwrotna wywoływana w przypadku błędu podczas usuwania pliku, z komunikatem błędu.
      */
     fun deleteFile(fileId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
@@ -113,11 +116,11 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
                     404 -> "Plik nie znaleziony"
                     else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("ManageFiles", "HTTP error przy usuwaniu pliku ID: $fileId", e)
+                Log.e("ManageFiles", "Błąd HTTP przy usuwaniu pliku ID: $fileId", e)
                 onError(errorMessage)
             } catch (e: Exception) {
                 val errorMessage = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("ManageFiles", "Network error przy usuwaniu pliku ID: $fileId", e)
+                Log.e("ManageFiles", "Błąd sieciowy przy usuwaniu pliku ID: $fileId", e)
                 onError(errorMessage)
             }
         }
@@ -125,14 +128,14 @@ class ManageFilesViewModel(context: Context, private val courseId: Long) : ViewM
 }
 
 /**
- *  Composable function for the Manage Files Screen.
+ * Funkcja composable dla ekranu zarządzania plikami.
  *
- * This screen allows users to view, upload, and delete files associated with a specific course.
- * It displays a list of files, provides an option to add new files via a file picker,
- * and allows deleting existing files.
+ * Ten ekran umożliwia użytkownikom przeglądanie, przesyłanie i usuwanie plików związanych z określonym kursem.
+ * Wyświetla listę plików, oferuje opcję dodawania nowych plików za pomocą selektora plików
+ * oraz umożliwia usuwanie istniejących plików.
  *
- * @param navController The NavHostController for navigating between screens.
- * @param courseId The ID of the course for which files are being managed.
+ * @param navController Kontroler nawigacji do przechodzenia między ekranami.
+ * @param courseId Identyfikator kursu, dla którego zarządzane są pliki.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

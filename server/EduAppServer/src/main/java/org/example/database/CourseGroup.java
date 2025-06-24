@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * @brief
  * Klasa encji reprezentująca grupę kursów.
  * Mapowana jest do tabeli "course_groups" w bazie danych.
  */

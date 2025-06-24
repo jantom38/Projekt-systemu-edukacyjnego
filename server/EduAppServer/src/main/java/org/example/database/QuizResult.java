@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
+ * @brief
  * Klasa encji reprezentująca wynik quizu użytkownika.
  * Mapowana jest do tabeli "quiz_results" w bazie danych.
  */

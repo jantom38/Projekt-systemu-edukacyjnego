@@ -28,14 +28,14 @@ import retrofit2.HttpException
 
 /**
  * @file EditQuizScreen.kt
- *  This file contains the ViewModel and Composable for the Edit Quiz screen.
+ * Ten plik zawiera ViewModel i Composable dla ekranu edycji quizu.
  */
 
 /**
- *  ViewModel for the EditQuizScreen.
- * Handles fetching, updating, and deleting quiz data and questions.
- * @param context The Android context.
- * @param quizId The ID of the quiz to be edited.
+ * ViewModel dla EditQuizScreen.
+ * Obsługuje pobieranie, aktualizowanie i usuwanie danych quizu i pytań.
+ * @param context Kontekst Androida.
+ * @param quizId ID quizu do edycji.
  */
 class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel() {
     private val _quiz = mutableStateOf<Quiz?>(null)
@@ -54,8 +54,8 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
     }
 
     /**
-     *  Loads the quiz data from the API.
-     * Updates [_quiz], [_isLoading], and [_error] states based on the API response.
+     * Ładuje dane quizu z API.
+     * Aktualizuje stany [_quiz], [_isLoading] i [_error] na podstawie odpowiedzi API.
      */
     fun loadQuiz() {
         viewModelScope.launch {
@@ -88,10 +88,10 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
     }
 
     /**
-     *  Updates the quiz details via the API.
-     * @param quiz The updated Quiz object.
-     * @param onSuccess Callback function to be invoked on successful update.
-     * @param onError Callback function to be invoked with an error message on failure.
+     * Aktualizuje szczegóły quizu za pośrednictwem API.
+     * @param quiz Zaktualizowany obiekt Quiz.
+     * @param onSuccess Funkcja zwrotna wywoływana po pomyślnej aktualizacji.
+     * @param onError Funkcja zwrotna wywoływana z komunikatem o błędzie w przypadku niepowodzenia.
      */
     fun updateQuiz(quiz: Quiz, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
@@ -125,11 +125,11 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
     }
 
     /**
-     *  Deletes a question from the quiz via the API.
-     * After successful deletion, it reloads the quiz data.
-     * @param questionId The ID of the question to delete.
-     * @param onSuccess Callback function to be invoked on successful deletion.
-     * @param onError Callback function to be invoked with an error message on failure.
+     * Usuwa pytanie z quizu za pośrednictwem API.
+     * Po pomyślnym usunięciu, ponownie ładuje dane quizu.
+     * @param questionId ID pytania do usunięcia.
+     * @param onSuccess Funkcja zwrotna wywoływana po pomyślnym usunięciu.
+     * @param onError Funkcja zwrotna wywoływana z komunikatem o błędzie w przypadku niepowodzenia.
      */
     fun deleteQuestion(questionId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
@@ -164,10 +164,10 @@ class EditQuizViewModel(context: Context, private val quizId: Long) : ViewModel(
 }
 
 /**
- *  Composable function for the Edit Quiz screen.
- * Allows users to edit quiz details and manage its questions.
- * @param navController The NavHostController for navigation.
- * @param quizId The ID of the quiz to be edited.
+ * Funkcja kompozycyjna dla ekranu edycji quizu.
+ * Umożliwia użytkownikom edycję szczegółów quizu i zarządzanie jego pytaniami.
+ * @param navController NavHostController do nawigacji.
+ * @param quizId ID quizu do edycji.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

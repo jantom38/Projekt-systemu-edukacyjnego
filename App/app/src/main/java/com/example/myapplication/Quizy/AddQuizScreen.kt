@@ -23,19 +23,19 @@ import kotlinx.coroutines.launch
 
 /**
  * @file AddQuizScreen.kt
- *  This file contains the composable function for adding new quizzes.
+ * Ten plik zawiera funkcję kompozycyjną do dodawania nowych quizów.
  */
 
 /**
- *  Composable function for the Add Quiz Screen.
+ * Funkcja kompozycyjna dla ekranu dodawania quizu.
  *
- * This screen allows users to create a new quiz for a specific course.
- * Users can input the quiz title, description, the number of questions to display randomly,
- * and define multiple questions with different types (multiple choice, true/false, open-ended)
- * along with their respective options and correct answers.
+ * Ten ekran umożliwia użytkownikom tworzenie nowego quizu dla określonego kursu.
+ * Użytkownicy mogą wprowadzić tytuł quizu, opis, liczbę pytań do wyświetlenia losowo,
+ * oraz zdefiniować wiele pytań z różnymi typami (wielokrotnego wyboru, prawda/fałsz, otwarte)
+ * wraz z ich odpowiednimi opcjami i poprawnymi odpowiedziami.
  *
- * @param navController The NavHostController for navigating between screens.
- * @param courseId The ID of the course to which the quiz will be added.
+ * @param navController NavHostController do nawigacji między ekranami.
+ * @param courseId Identyfikator kursu, do którego zostanie dodany quiz.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,15 +46,15 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    // New state for the number of questions to display
-    var numberOfQuestionsToDisplay by remember { mutableStateOf("1") } // Default to 1
+    // Nowy stan dla liczby pytań do wyświetlenia
+    var numberOfQuestionsToDisplay by remember { mutableStateOf("1") } // Domyślnie 1
 
     /**
-     *  Data model for a quiz question input during editing.
-     * @param questionText The text of the question.
-     * @param questionType The type of the question (e.g., "multiple_choice", "true_false", "open_ended").
-     * @param options A mutable map of options for multiple choice or true/false questions.
-     * @param correctAnswers A list of correct answers for the question.
+     * Model danych dla wprowadzania pytania quizowego podczas edycji.
+     * @param questionText Treść pytania.
+     * @param questionType Typ pytania (np. "multiple_choice", "true_false", "open_ended").
+     * @param options Mapa opcji dla pytań wielokrotnego wyboru lub prawda/fałsz.
+     * @param correctAnswers Lista poprawnych odpowiedzi na pytanie.
      */
     data class QuizQuestionInput(
         val questionText: String = "",
@@ -66,20 +66,20 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
     var questions by remember { mutableStateOf<MutableList<QuizQuestionInput>>(mutableListOf()) }
 
     /**
-     *  Adds a new, empty question to the list of questions.
+     * Dodaje nowe, puste pytanie do listy pytań.
      */
     fun addQuestion() {
         questions = (questions + QuizQuestionInput()).toMutableList()
     }
 
     /**
-     *  Updates a question at a specific index in the list.
+     * Aktualizuje pytanie o określonym indeksie na liście.
      *
-     * If the question type changes, it resets the options and correct answers
-     * to match the new question type's requirements.
+     * Jeśli typ pytania ulegnie zmianie, resetuje opcje i poprawne odpowiedzi
+     * w celu dopasowania do wymagań nowego typu pytania.
      *
-     * @param index The index of the question to update.
-     * @param update A lambda function that takes the current [QuizQuestionInput] and returns the updated one.
+     * @param index Indeks pytania do zaktualizowania.
+     * @param update Funkcja lambda, która przyjmuje bieżący [QuizQuestionInput] i zwraca zaktualizowany.
      */
     fun updateQuestion(index: Int, update: QuizQuestionInput.() -> QuizQuestionInput) {
         questions = questions.mapIndexed { i, q ->
@@ -105,8 +105,8 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
     }
 
     /**
-     *  Adds a new option to a multiple-choice question at a given index.
-     * @param index The index of the question to which the option will be added.
+     * Dodaje nową opcję do pytania wielokrotnego wyboru o podanym indeksie.
+     * @param index Indeks pytania, do którego zostanie dodana opcja.
      */
     fun addOption(index: Int) {
         updateQuestion(index) {
@@ -118,12 +118,12 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
     }
 
     /**
-     *  Removes an option from a question at a given index.
+     * Usuwa opcję z pytania o podanym indeksie.
      *
-     * Re-indexes the remaining options and updates the correct answers accordingly.
+     * Ponownie indeksuje pozostałe opcje i odpowiednio aktualizuje poprawne odpowiedzi.
      *
-     * @param index The index of the question from which the option will be removed.
-     * @param key The key of the option to remove (e.g., "A", "B").
+     * @param index Indeks pytania, z którego zostanie usunięta opcja.
+     * @param key Klucz opcji do usunięcia (np. "A", "B").
      */
     fun removeOption(index: Int, key: String) {
         updateQuestion(index) {
@@ -138,9 +138,9 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
     }
 
     /**
-     *  Toggles the correctness of an answer option for a question.
-     * @param index The index of the question.
-     * @param key The key of the option to toggle.
+     * Przełącza poprawność opcji odpowiedzi dla pytania.
+     * @param index Indeks pytania.
+     * @param key Klucz opcji do przełączenia.
      */
     fun toggleCorrectAnswer(index: Int, key: String) {
         updateQuestion(index) {
@@ -361,7 +361,7 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                             }
                             return@Button
                         }
-                        // Validate numberOfQuestionsToDisplay
+                        // Walidacja liczby pytań do wyświetlenia
                         val numQuestions = numberOfQuestionsToDisplay.toIntOrNull()
                         if (numQuestions == null || numQuestions <= 0) {
                             coroutineScope.launch {
@@ -376,7 +376,7 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                                 val quiz = Quiz(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
-                                    numberOfQuestionsToDisplay = numQuestions // Pass the new field
+                                    numberOfQuestionsToDisplay = numQuestions // Przekazanie nowego pola
                                 )
                                 Log.d("AddQuiz", "Wysyłanie quizu: $quiz dla kursu ID: $courseId")
                                 val quizResponse = api.createQuiz(courseId, quiz)
@@ -443,7 +443,7 @@ fun AddQuizScreen(navController: NavHostController, courseId: Long) {
                                     }
                                 } else {
                                     snackbarHostState.showSnackbar("Błąd zapisu quizu: ${quizResponse.code()}")
-                                    Log.e("AddQuiz", "Błąd HTTP przy zapisie quizu: ${quizResponse.code()}, error: ${quizResponse.errorBody()?.string()}")
+                                    Log.e("AddQuiz", "Błąd HTTP przy zapisie quizu: ${quizResponse.code()}, błąd: ${quizResponse.errorBody()?.string()}")
                                 }
                             } catch (e: Exception) {
                                 snackbarHostState.showSnackbar("Błąd: ${e.message}")

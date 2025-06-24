@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
+ * @brief
  * Klasa encji reprezentująca kod rejestracyjny dla określonej roli użytkownika.
  * Mapowana jest do tabeli "role_codes" w bazie danych.
  */

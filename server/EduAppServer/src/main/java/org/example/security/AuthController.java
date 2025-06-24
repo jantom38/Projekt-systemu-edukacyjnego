@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
+ * @brief
  * Kontroler odpowiedzialny za uwierzytelnianie użytkowników w systemie.
  * Obsługuje żądania logowania i generowania tokenów JWT.
  */

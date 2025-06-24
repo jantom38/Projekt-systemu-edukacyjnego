@@ -1,10 +1,4 @@
-/**
- * @file QuizResultController.java
- * @brief Kontroler odpowiedzialny za zarządzanie wynikami quizów.
- *
- * Zawiera metody do przesyłania odpowiedzi na quiz, pobierania wyników,
- * szczegółowych wyników dla nauczycieli/adminów oraz generowania raportów PDF.
- */
+
 package org.example.controllers;
 
 import jakarta.transaction.Transactional;

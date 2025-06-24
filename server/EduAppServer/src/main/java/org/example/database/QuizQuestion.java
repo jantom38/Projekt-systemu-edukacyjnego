@@ -8,6 +8,7 @@ import org.hibernate.type.SqlTypes;
 import java.util.Map;
 
 /**
+ * @brief
  * Klasa encji reprezentująca pytanie w quizie.
  * Mapowana jest do tabeli "quiz_questions" w bazie danych.
  */

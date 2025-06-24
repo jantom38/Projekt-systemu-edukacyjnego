@@ -1,10 +1,4 @@
-/**
- * @file Utils.java
- * @brief Klasa narzędziowa zawierająca pomocnicze metody statyczne.
- *
- * Zawiera metody do generowania losowych kodów, pobierania informacji
- * o aktualnie zalogowanym użytkowniku oraz sprawdzania jego ról.
- */
+
 package org.example.controllers;
 
 import org.example.DataBaseRepositories.UserRepository;
@@ -14,9 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.security.SecureRandom;
 
-/**
- * @brief Klasa pomocnicza zawierająca statyczne metody używane w kontrolerach.
- */
+
 public class Utils {
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; ///< Znaki używane do generowania kodu.

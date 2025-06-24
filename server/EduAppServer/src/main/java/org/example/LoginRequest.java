@@ -1,6 +1,7 @@
 package org.example;
 
 /**
+ * @brief
  * Klasa DTO (Data Transfer Object) reprezentująca żądanie logowania.
  * Służy do przenoszenia danych (nazwy użytkownika i hasła) z żądania HTTP do serwisu uwierzytelniającego.
  */

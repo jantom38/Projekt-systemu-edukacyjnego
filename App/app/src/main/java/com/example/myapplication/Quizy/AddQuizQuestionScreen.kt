@@ -25,38 +25,38 @@ import retrofit2.HttpException
 
 /**
  * @file AddQuizQuestionScreen.kt
- *  This file contains the composable function for adding new quiz questions and its associated ViewModel.
+ * Plik zawiera funkcję Composable dla ekranu dodawania nowych pytań do quizu oraz powiązany ViewModel.
  */
 
 /**
- *  ViewModel for the AddQuizQuestionScreen.
+ * ViewModel dla ekranu AddQuizQuestionScreen.
  *
- * This ViewModel handles the logic for creating new quiz questions by interacting with the API.
+ * Ten ViewModel zarządza logiką tworzenia nowych pytań do quizu poprzez interakcję z API.
  *
- * @param context The application context.
- * @param quizId The ID of the quiz to which the question will be added.
+ * @param context Kontekst aplikacji.
+ * @param quizId Identyfikator quizu, do którego zostanie dodane pytanie.
  */
 class AddQuizQuestionViewModel(context: Context, private val quizId: Long) : ViewModel() {
     private val apiService = RetrofitClient.getInstance(context)
 
     /**
-     *  Creates a new quiz question.
+     * Tworzy nowe pytanie do quizu.
      *
-     * @param question The [QuizQuestion] object to be created.
-     * @param onSuccess Callback to be invoked when the question is successfully created.
-     * @param onError Callback to be invoked when an error occurs during question creation, providing an error message.
+     * @param question Obiekt [QuizQuestion] do utworzenia.
+     * @param onSuccess Funkcja zwrotna wywoływana po pomyślnym utworzeniu pytania.
+     * @param onError Funkcja zwrotna wywoływana w przypadku błędu podczas tworzenia pytania, z komunikatem błędu.
      */
     fun createQuestion(question: QuizQuestion, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                Log.d("AddQuizQuestionViewModel", "Creating question for quiz ID: $quizId")
+                Log.d("AddQuizQuestionViewModel", "Tworzenie pytania dla quizu ID: $quizId")
                 val response = apiService.createQuizQuestion(quizId, question)
                 if (response.isSuccessful && response.body()?.success == true) {
-                    Log.d("AddQuizQuestionViewModel", "Question created successfully")
+                    Log.d("AddQuizQuestionViewModel", "Pytanie utworzone pomyślnie")
                     onSuccess()
                 } else {
                     val errorMessage = response.body()?.message ?: "Błąd serwera: ${response.code()}"
-                    Log.e("AddQuizQuestionViewModel", "Failed to create question: $errorMessage")
+                    Log.e("AddQuizQuestionViewModel", "Nie udało się utworzyć pytania: $errorMessage")
                     onError(errorMessage)
                 }
             } catch (e: HttpException) {
@@ -66,11 +66,11 @@ class AddQuizQuestionViewModel(context: Context, private val quizId: Long) : Vie
                     404 -> "Quiz nie znaleziony"
                     else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("AddQuizQuestionViewModel", "HTTP error creating question", e)
+                Log.e("AddQuizQuestionViewModel", "Błąd HTTP podczas tworzenia pytania", e)
                 onError(errorMessage)
             } catch (e: Exception) {
                 val errorMessage = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("AddQuizQuestionViewModel", "Network error creating question", e)
+                Log.e("AddQuizQuestionViewModel", "Błąd sieciowy podczas tworzenia pytania", e)
                 onError(errorMessage)
             }
         }
@@ -78,14 +78,14 @@ class AddQuizQuestionViewModel(context: Context, private val quizId: Long) : Vie
 }
 
 /**
- *  Composable function for the Add Quiz Question Screen.
+ * Funkcja Composable dla ekranu dodawania pytań do quizu.
  *
- * This screen allows users to add new questions to a specified quiz.
- * Users can input the question text, select the question type (multiple choice, true/false, open-ended),
- * define options (for multiple choice and true/false), and specify the correct answer(s).
+ * Ten ekran umożliwia użytkownikom dodawanie nowych pytań do określonego quizu.
+ * Użytkownicy mogą wprowadzić treść pytania, wybrać typ pytania (wielokrotnego wyboru, prawda/fałsz, otwarte),
+ * określić opcje (dla pytań wielokrotnego wyboru i prawda/fałsz) oraz wskazać poprawną odpowiedź(-i).
  *
- * @param navController The NavHostController for navigating between screens.
- * @param quizId The ID of the quiz to which the question will be added.
+ * @param navController Kontroler nawigacji do przechodzenia między ekranami.
+ * @param quizId Identyfikator quizu, do którego zostanie dodane pytanie.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,8 +103,8 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
     var questionType by remember { mutableStateOf("multiple_choice") }
     var correctAnswer by remember { mutableStateOf("") }
     var options by remember { mutableStateOf(mapOf<String, String>("A" to "", "B" to "")) }
-    var expanded by remember { mutableStateOf(false) } // For question type dropdown
-    var tfExpanded by remember { mutableStateOf(false) } // For True/False dropdown
+    var expanded by remember { mutableStateOf(false) } // Dla menu rozwijanego typu pytania
+    var tfExpanded by remember { mutableStateOf(false) } // Dla menu rozwijanego prawda/fałsz
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -166,8 +166,8 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                         text = { Text("Prawda/Fałsz") },
                         onClick = {
                             questionType = "true_false"
-                            options = mapOf("True" to "Prawda", "False" to "Fałsz") // Set predefined options for True/False
-                            correctAnswer = "" // Clear previous correct answer
+                            options = mapOf("True" to "Prawda", "False" to "Fałsz") // Ustawia predefiniowane opcje dla prawda/fałsz
+                            correctAnswer = "" // Czyści poprzednią poprawną odpowiedź
                             expanded = false
                         }
                     )
@@ -205,10 +205,10 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                             IconButton(
                                 onClick = {
                                     options = options.toMutableMap().apply { remove(key) }
-                                    // Remove from correctAnswer if it was selected
+                                    // Usuń z poprawnych odpowiedzi, jeśli była wybrana
                                     correctAnswer = correctAnswer.split(",").filter { it != key }.joinToString(",")
                                 },
-                                enabled = options.size > 2 // Minimum 2 options
+                                enabled = options.size > 2 // Minimum 2 opcje
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = "Usuń opcję")
                             }
@@ -221,7 +221,7 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                                 options = options.toMutableMap().apply { put(newKey, "") }
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = options.size < 10 // Max 10 options
+                            enabled = options.size < 10 // Maksimum 10 opcji
                         ) {
                             Text("Dodaj opcję")
                         }
@@ -235,7 +235,7 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (questionType == "true_false") {
-                // True/False Dropdown menu for correct answer
+                // Menu rozwijane dla poprawnych odpowiedzi prawda/fałsz
                 ExposedDropdownMenuBox(
                     expanded = tfExpanded,
                     onExpandedChange = { tfExpanded = !tfExpanded }
@@ -336,7 +336,7 @@ fun AddQuizQuestionScreen(navController: NavHostController, quizId: Long) {
                         QuizQuestion(
                             questionText = questionText,
                             questionType = questionType,
-                            options = if (questionType in listOf("multiple_choice", "true_false")) options else null, // Ensure options are passed for true_false
+                            options = if (questionType in listOf("multiple_choice", "true_false")) options else null, // Zapewnia przekazanie opcji dla prawda/fałsz
                             correctAnswer = correctAnswer,
                             quizId = quizId
                         ),

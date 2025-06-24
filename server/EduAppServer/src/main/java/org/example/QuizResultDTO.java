@@ -4,6 +4,7 @@ package org.example.dto;
 import java.time.LocalDateTime;
 
 /**
+ * @brief
  * Rekord DTO (Data Transfer Object) reprezentujący skrócony wynik quizu.
  * Może być używany do wyświetlania podstawowych informacji o wyniku, bez szczegółów każdej odpowiedzi.
  *

@@ -1,11 +1,4 @@
-/**
- * @file SubmissionResultDTO.java
- * @brief Klasa DTO (Data Transfer Object) do przesyłania wyników przesłanego quizu.
- *
- * Służy do hermetyzacji danych dotyczących wyniku quizu, takich jak
- * status sukcesu, uzyskany wynik, liczba poprawnych odpowiedzi,
- * całkowita liczba pytań oraz wynik procentowy.
- */
+
 package org.example.controllers;
 
 import lombok.Data;

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
 /**
+ * @brief
  * Klasa encji reprezentująca powiązanie między użytkownikiem a kursem.
  * Mapowana jest do tabeli "user_courses" w bazie danych.
  */

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * @brief
  * Klasa encji reprezentująca quiz.
  * Mapowana jest do tabeli "quizzes" w bazie danych.
  */

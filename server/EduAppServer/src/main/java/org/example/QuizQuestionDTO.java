@@ -4,6 +4,7 @@ package org.example.dto;
 import java.util.Map;
 
 /**
+ * @brief
  * Rekord DTO (Data Transfer Object) reprezentujący pytanie quizu przeznaczone do wyświetlenia użytkownikowi.
  * Zawiera tylko niezbędne informacje, bez poprawnej odpowiedzi.
  *

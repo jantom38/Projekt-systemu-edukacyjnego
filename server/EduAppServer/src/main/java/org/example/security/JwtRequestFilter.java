@@ -16,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
+ * @brief
  * Filtr żądań JWT, który przechwytuje każde żądanie HTTP
  * w celu weryfikacji tokenu JWT i ustawienia kontekstu bezpieczeństwa.
  * Rozszerza OncePerRequestFilter, aby zapewnić wykonanie filtra tylko raz na żądanie.

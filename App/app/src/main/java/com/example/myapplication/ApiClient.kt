@@ -17,16 +17,16 @@ import retrofit2.http.*
 
 /**
  * @file ApiClient.kt
- *  This file contains the data models and the Retrofit API service interface for interacting with the backend.
+ * Ten plik zawiera modele danych i interfejs usługi API Retrofit do interakcji z backendem.
  */
 
 // NOWY MODEL DANYCH
 /**
- *  Data class representing a course group.
- * @param id The unique identifier of the course group.
- * @param name The name of the course group.
- * @param description An optional description of the course group.
- * @param courses A list of courses belonging to this group.
+ * Klasa danych reprezentująca grupę kursów.
+ * @param id Unikalny identyfikator grupy kursów.
+ * @param name Nazwa grupy kursów.
+ * @param description Opcjonalny opis grupy kursów.
+ * @param courses Lista kursów należących do tej grupy.
  */
 data class CourseGroup(
     val id: Long,
@@ -35,13 +35,13 @@ data class CourseGroup(
     val courses: List<Course>
 )
 
-// Existing data classes remain unchanged
+// Istniejące klasy danych pozostają niezmienione
 /**
- *  Data class representing information about a user's course.
- * @param id The unique identifier of the user.
- * @param username The username of the user.
- * @param role The role of the user within the course (e.g., student, teacher).
- * @param joinedAt The date the user joined the course, as a string (optional).
+ * Klasa danych reprezentująca informacje o kursie użytkownika.
+ * @param id Unikalny identyfikator użytkownika.
+ * @param username Nazwa użytkownika.
+ * @param role Rola użytkownika w ramach kursu (np. student, nauczyciel).
+ * @param joinedAt Data dołączenia użytkownika do kursu, jako string (opcjonalnie).
  */
 data class UserCourseInfo(
     val id: Long,
@@ -51,9 +51,9 @@ data class UserCourseInfo(
 )
 
 /**
- *  Data class for submitting a quiz answer.
- * @param questionId The ID of the question.
- * @param answer The answer provided for the question.
+ * Klasa danych do przesyłania odpowiedzi na quiz.
+ * @param questionId ID pytania.
+ * @param answer Odpowiedź udzielona na pytanie.
  */
 data class QuizAnswerDTO(
     val questionId: Long,
@@ -61,13 +61,13 @@ data class QuizAnswerDTO(
 )
 
 /**
- *  Data class representing a quiz.
- * @param id The unique identifier of the quiz (optional, for creation).
- * @param title The title of the quiz.
- * @param description An optional description of the quiz.
- * @param createdAt The creation date of the quiz, as a string (optional).
- * @param questions A list of questions in the quiz.
- * @param numberOfQuestionsToDisplay The number of questions to display in the quiz (optional).
+ * Klasa danych reprezentująca quiz.
+ * @param id Unikalny identyfikator quizu (opcjonalnie, do tworzenia).
+ * @param title Tytuł quizu.
+ * @param description Opcjonalny opis quizu.
+ * @param createdAt Data utworzenia quizu, jako string (opcjonalnie).
+ * @param questions Lista pytań w quizie.
+ * @param numberOfQuestionsToDisplay Liczba pytań do wyświetlenia w quizie (opcjonalnie).
  */
 data class Quiz(
     val id: Long? = null,
@@ -79,11 +79,11 @@ data class Quiz(
 )
 
 /**
- *  Data class representing a quiz to be solved.
- * @param id The unique identifier of the quiz.
- * @param title The title of the quiz.
- * @param description An optional description of the quiz.
- * @param questions A list of questions in the quiz.
+ * Klasa danych reprezentująca quiz do rozwiązania.
+ * @param id Unikalny identyfikator quizu.
+ * @param title Tytuł quizu.
+ * @param description Opcjonalny opis quizu.
+ * @param questions Lista pytań w quizie.
  */
 data class Quizsolve(
     val id: Long,
@@ -93,13 +93,13 @@ data class Quizsolve(
 )
 
 /**
- *  Data class representing a quiz question.
- * @param id The unique identifier of the question (optional, for creation).
- * @param questionText The text of the question.
- * @param questionType The type of the question (e.g., "single_choice", "multiple_choice", "text").
- * @param options A map of options for multiple-choice questions, where the key is the option identifier and the value is the option text (optional).
- * @param correctAnswer The correct answer to the question.
- * @param quizId The ID of the quiz this question belongs to (optional).
+ * Klasa danych reprezentująca pytanie quizowe.
+ * @param id Unikalny identyfikator pytania (opcjonalnie, do tworzenia).
+ * @param questionText Treść pytania.
+ * @param questionType Typ pytania (np. "single_choice", "multiple_choice", "text").
+ * @param options Mapa opcji dla pytań wielokrotnego wyboru, gdzie klucz to identyfikator opcji, a wartość to tekst opcji (opcjonalnie).
+ * @param correctAnswer Poprawna odpowiedź na pytanie.
+ * @param quizId ID quizu, do którego należy to pytanie (opcjonalnie).
  */
 data class QuizQuestion(
     @SerializedName("questionId")
@@ -112,9 +112,9 @@ data class QuizQuestion(
 )
 
 /**
- *  Data class representing a response containing quiz history.
- * @param success Indicates if the request was successful.
- * @param results A list of quiz history items.
+ * Klasa danych reprezentująca odpowiedź zawierającą historię quizów.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param results Lista elementów historii quizów.
  */
 data class QuizHistoryResponse(
     val success: Boolean,
@@ -122,9 +122,9 @@ data class QuizHistoryResponse(
 )
 
 /**
- *  Data class representing a single item in quiz history.
- * @param date The date of the quiz attempt.
- * @param score The score achieved in the quiz attempt.
+ * Klasa danych reprezentująca pojedynczy element w historii quizów.
+ * @param date Data próby quizu.
+ * @param score Wynik uzyskany w próbie quizu.
  */
 data class QuizHistoryItem(
     val date: String,
@@ -132,12 +132,12 @@ data class QuizHistoryItem(
 )
 
 /**
- *  Data class representing the result of a quiz submission.
- * @param success Indicates if the submission was successful.
- * @param score The score achieved.
- * @param correctAnswers The number of correct answers.
- * @param totalQuestions The total number of questions.
- * @param percentage The percentage of correct answers.
+ * Klasa danych reprezentująca wynik przesłania quizu.
+ * @param success Wskazuje, czy przesłanie zakończyło się sukcesem.
+ * @param score Uzyskany wynik.
+ * @param correctAnswers Liczba poprawnych odpowiedzi.
+ * @param totalQuestions Całkowita liczba pytań.
+ * @param percentage Procent poprawnych odpowiedzi.
  */
 data class SubmissionResultDTO(
     val success: Boolean,
@@ -148,19 +148,18 @@ data class SubmissionResultDTO(
 )
 
 
-
 /**
- *  Data class representing a response containing a list of quizzes.
- * @param success Indicates if the request was successful.
- * @param quizzes A list of quizzes.
+ * Klasa danych reprezentująca odpowiedź zawierającą listę quizów.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param quizzes Lista quizów.
  */
 data class QuizListResponse(val success: Boolean, val quizzes: List<Quiz>)
 
 /**
- *  Data class representing a response for a single quiz.
- * @param success Indicates if the request was successful.
- * @param quiz The quiz object.
- * @param message A message related to the response.
+ * Klasa danych reprezentująca odpowiedź dla pojedynczego quizu.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param quiz Obiekt quizu.
+ * @param message Komunikat związany z odpowiedzią.
  */
 data class QuizResponse(
     val success: Boolean,
@@ -169,17 +168,17 @@ data class QuizResponse(
 )
 
 /**
- *  Data class representing a response for a single question.
- * @param success Indicates if the request was successful.
- * @param message A message related to the response.
- * @param question The quiz question object.
+ * Klasa danych reprezentująca odpowiedź dla pojedynczego pytania.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param message Komunikat związany z odpowiedzią.
+ * @param question Obiekt pytania quizu.
  */
 data class QuestionResponse(val success: Boolean, val message: String, val question: QuizQuestion)
 
 /**
- *  Generic data class for API responses.
- * @param success Indicates if the request was successful.
- * @param message A message related to the response.
+ * Ogólna klasa danych dla odpowiedzi API.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param message Komunikat związany z odpowiedzią.
  */
 data class GenericResponse(
     val success: Boolean,
@@ -187,56 +186,56 @@ data class GenericResponse(
 )
 
 /**
- *  Data class for login requests.
- * @param username The username for login.
- * @param password The password for login.
+ * Klasa danych dla żądań logowania.
+ * @param username Nazwa użytkownika do logowania.
+ * @param password Hasło do logowania.
  */
 data class LoginRequest(val username: String, val password: String)
 
 /**
- *  Data class for login responses.
- * @param success Indicates if the login was successful.
- * @param token The JWT token if login was successful (optional).
- * @param role The role of the logged-in user (optional).
+ * Klasa danych dla odpowiedzi logowania.
+ * @param success Wskazuje, czy logowanie zakończyło się sukcesem.
+ * @param token Token JWT, jeśli logowanie zakończyło się sukcesem (opcjonalnie).
+ * @param role Rola zalogowanego użytkownika (opcjonalnie).
  */
 data class LoginResponse(val success: Boolean, val token: String?, val role: String?)
 
 /**
- *  Data class for registration requests.
- * @param username The username for registration.
- * @param password The password for registration.
- * @param roleCode The role code for the user (e.g., "STUDENT", "TEACHER").
+ * Klasa danych dla żądań rejestracji.
+ * @param username Nazwa użytkownika do rejestracji.
+ * @param password Hasło do rejestracji.
+ * @param roleCode Kod roli dla użytkownika (np. "STUDENT", "TEACHER").
  */
 data class RegisterRequest(val username: String, val password: String, val roleCode: String)
 
 /**
- *  Data class for registration responses.
- * @param success Indicates if the registration was successful.
- * @param message A message related to the response.
+ * Klasa danych dla odpowiedzi rejestracji.
+ * @param success Wskazuje, czy rejestracja zakończyła się sukcesem.
+ * @param message Komunikat związany z odpowiedzią.
  */
 data class RegisterResponse(val success: Boolean, val message: String)
 
 /**
- *  Data class for generating a student code request.
- * @param validity The validity period of the code.
+ * Klasa danych do generowania żądania kodu studenckiego.
+ * @param validity Okres ważności kodu.
  */
 data class GenerateCodeRequest(val validity: String)
 
 /**
- *  Data class for generating a student code response.
- * @param success Indicates if the code generation was successful.
- * @param code The generated code.
- * @param expiresAt The expiration date of the code.
- * @param message A message related to the response.
+ * Klasa danych do generowania odpowiedzi kodu studenckiego.
+ * @param success Wskazuje, czy generowanie kodu zakończyło się sukcesem.
+ * @param code Wygenerowany kod.
+ * @param expiresAt Data wygaśnięcia kodu.
+ * @param message Komunikat związany z odpowiedzią.
  */
 data class GenerateCodeResponse(val success: Boolean, val code: String, val expiresAt: String, val message: String)
 
 /**
- *  Data class representing statistics for a single quiz.
- * @param quizId The ID of the quiz.
- * @param quizTitle The title of the quiz.
- * @param attempts The number of attempts for the quiz.
- * @param averageScore The average score for the quiz.
+ * Klasa danych reprezentująca statystyki dla pojedynczego quizu.
+ * @param quizId ID quizu.
+ * @param quizTitle Tytuł quizu.
+ * @param attempts Liczba prób dla quizu.
+ * @param averageScore Średnia ocena dla quizu.
  */
 data class QuizStat(
     val quizId: Long,
@@ -246,15 +245,15 @@ data class QuizStat(
 )
 
 /**
- *  Data class representing detailed results for a quiz attempt.
- * @param userId The ID of the user who took the quiz.
- * @param resultId The ID of the quiz result.
- * @param username The username of the user.
- * @param correctAnswers The number of correct answers.
- * @param totalQuestions The total number of questions.
- * @param score The score achieved.
- * @param completionDate The date of quiz completion.
- * @param answers A list of maps, each representing an answer to a question.
+ * Klasa danych reprezentująca szczegółowe wyniki próby quizu.
+ * @param userId ID użytkownika, który rozwiązał quiz.
+ * @param resultId ID wyniku quizu.
+ * @param username Nazwa użytkownika.
+ * @param correctAnswers Liczba poprawnych odpowiedzi.
+ * @param totalQuestions Całkowita liczba pytań.
+ * @param score Uzyskany wynik.
+ * @param completionDate Data ukończenia quizu.
+ * @param answers Lista map, z których każda reprezentuje odpowiedź na pytanie.
  */
 data class QuizDetailedResult(
     val userId: Long,
@@ -268,10 +267,10 @@ data class QuizDetailedResult(
 )
 
 /**
- *  Data class representing a response containing quiz statistics for a course.
- * @param success Indicates if the request was successful.
- * @param courseId The ID of the course.
- * @param stats A list of quiz statistics.
+ * Klasa danych reprezentująca odpowiedź zawierającą statystyki quizu dla kursu.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param courseId ID kursu.
+ * @param stats Lista statystyk quizu.
  */
 data class QuizStatsResponse(
     val success: Boolean,
@@ -280,11 +279,11 @@ data class QuizStatsResponse(
 )
 
 /**
- *  Data class representing a response containing detailed quiz results.
- * @param success Indicates if the request was successful.
- * @param quizId The ID of the quiz.
- * @param quizTitle The title of the quiz.
- * @param results A list of detailed quiz results.
+ * Klasa danych reprezentująca odpowiedź zawierającą szczegółowe wyniki quizu.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param quizId ID quizu.
+ * @param quizTitle Tytuł quizu.
+ * @param results Lista szczegółowych wyników quizu.
  */
 data class QuizDetailedResultsResponse(
     val success: Boolean,
@@ -294,9 +293,9 @@ data class QuizDetailedResultsResponse(
 )
 
 /**
- *  Data class representing a response containing users enrolled in a course.
- * @param success Indicates if the request was successful.
- * @param users A list of user course information.
+ * Klasa danych reprezentująca odpowiedź zawierającą użytkowników zapisanych na kurs.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param users Lista informacji o użytkownikach kursu.
  */
 data class CourseUsersResponse(
     val success: Boolean,
@@ -304,9 +303,9 @@ data class CourseUsersResponse(
 )
 
 /**
- *  Data class representing a response containing a list of all users.
- * @param success Indicates if the request was successful.
- * @param users A list of user course information.
+ * Klasa danych reprezentująca odpowiedź zawierającą listę wszystkich użytkowników.
+ * @param success Wskazuje, czy żądanie zakończyło się sukcesem.
+ * @param users Lista informacji o użytkownikach kursu.
  */
 data class UsersResponse(
     val success: Boolean,
@@ -314,69 +313,69 @@ data class UsersResponse(
 )
 
 /**
- *  Retrofit interface for Course API services.
- * Defines the endpoints for interacting with the course management backend.
+ * Interfejs Retrofit dla usług API kursów.
+ * Definiuje punkty końcowe do interakcji z backendem zarządzania kursami.
  */
 interface CourseApiService {
     /**
-     *  Logs in a user.
-     * @param request The login request containing username and password.
-     * @return A Retrofit Response object containing LoginResponse.
+     * Loguje użytkownika.
+     * @param request Żądanie logowania zawierające nazwę użytkownika i hasło.
+     * @return Obiekt Retrofit Response zawierający LoginResponse.
      */
     @POST("/api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
     /**
-     *  Registers a new user.
-     * @param request The registration request containing username, password, and role code.
-     * @return A Retrofit Response object containing RegisterResponse.
+     * Rejestruje nowego użytkownika.
+     * @param request Żądanie rejestracji zawierające nazwę użytkownika, hasło i kod roli.
+     * @return Obiekt Retrofit Response zawierający RegisterResponse.
      */
     @POST("/api/courses/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<RegisterResponse>
 
     /**
-     *  Generates a student registration code.
-     * @param request The request containing the validity period for the code.
-     * @return A Retrofit Response object containing GenerateCodeResponse.
+     * Generuje kod rejestracji studenta.
+     * @param request Żądanie zawierające okres ważności kodu.
+     * @return Obiekt Retrofit Response zawierający GenerateCodeResponse.
      */
     @POST("/api/courses/auth/generate-student-code")
     suspend fun generateStudentCode(@Body request: GenerateCodeRequest): Response<GenerateCodeResponse>
 
     /**
-     *  Retrieves all available courses.
-     * @return A list of Course objects.
+     * Pobiera wszystkie dostępne kursy.
+     * @return Lista obiektów Course.
      */
     @GET("/api/courses")
     suspend fun getAllCourses(): List<Course>
 
     /**
-     *  Creates a new course.
-     * @param courseData A map containing the course data.
-     * @return A Retrofit Response object containing a map with the API response.
+     * Tworzy nowy kurs.
+     * @param courseData Mapa zawierająca dane kursu.
+     * @return Obiekt Retrofit Response zawierający mapę z odpowiedzią API.
      */
     @POST("/api/courses")
     suspend fun createCourse(@Body courseData: Map<String, @JvmSuppressWildcards Any?>): Response<Map<String, Any>>
 
     /**
-     *  Deletes a course by its ID.
-     * @param id The ID of the course to delete.
-     * @return A Retrofit Response object containing a map with the API response.
+     * Usuwa kurs o podanym ID.
+     * @param id ID kursu do usunięcia.
+     * @return Obiekt Retrofit Response zawierający mapę z odpowiedzią API.
      */
     @DELETE("/api/courses/{id}")
     suspend fun deleteCourse(@Path("id") id: Long): Response<Map<String, Any>>
 
     /**
-     *  Retrieves all course groups.
-     * @return A Retrofit Response object containing a list of CourseGroup objects.
+     * Pobiera wszystkie grupy kursów.
+     * @return Obiekt Retrofit Response zawierający listę obiektów CourseGroup.
      */
     @GET("/api/course-groups")
     suspend fun getCourseGroups(): Response<List<CourseGroup>>
 
     /**
-     *  Enrolls a user in a specific course group.
-     * @param groupId The ID of the course group to enroll in.
-     * @param request A map containing any additional enrollment data (e.g., enrollment key).
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Zapisuje użytkownika do określonej grupy kursów.
+     * @param groupId ID grupy kursów, do której należy się zapisać.
+     * @param request Mapa zawierająca wszelkie dodatkowe dane dotyczące zapisu (np. klucz zapisu).
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @POST("/api/course-groups/{groupId}/enroll")
     suspend fun enrollInCourseGroup(
@@ -385,44 +384,44 @@ interface CourseApiService {
     ): Response<GenericResponse>
 
     /**
-     *  Deletes a course group by its ID.
-     * @param groupId The ID of the course group to delete.
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Usuwa grupę kursów o podanym ID.
+     * @param groupId ID grupy kursów do usunięcia.
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @DELETE("/api/course-groups/{groupId}")
     suspend fun deleteCourseGroup(@Path("groupId") groupId: Long): Response<GenericResponse>
 
     /**
-     *  Deletes a specific quiz result.
-     * @param resultId The ID of the quiz result to delete.
-     * @return A Retrofit Response object containing a map with the API response.
+     * Usuwa określony wynik quizu.
+     * @param resultId ID wyniku quizu do usunięcia.
+     * @return Obiekt Retrofit Response zawierający mapę z odpowiedzią API.
      */
     @DELETE("api/courses/quizzes/results/{resultId}")
     suspend fun deleteQuizResult(@Path("resultId") resultId: Long): Response<Map<String, Any>>
 
     /**
-     *  Downloads a PDF report of detailed quiz results for a given quiz.
-     * @param quizId The ID of the quiz.
-     * @return A Retrofit Response object containing a ResponseBody for streaming the PDF.
+     * Pobiera raport PDF ze szczegółowymi wynikami quizu dla danego quizu.
+     * @param quizId ID quizu.
+     * @return Obiekt Retrofit Response zawierający ResponseBody do strumieniowania PDF.
      */
     @Streaming // Ważne dla pobierania dużych plików
     @GET("api/courses/quizzes/{quizId}/detailed-results/pdf")
     suspend fun downloadQuizResultsPdf(@Path("quizId") quizId: Long): Response<ResponseBody>
 
     /**
-     *  Creates a new course group.
-     * @param request A map containing the data for the new course group.
-     * @return A Retrofit Response object containing the created CourseGroup.
+     * Tworzy nową grupę kursów.
+     * @param request Mapa zawierająca dane dla nowej grupy kursów.
+     * @return Obiekt Retrofit Response zawierający utworzoną CourseGroup.
      */
     @POST("/api/course-groups")
     suspend fun createCourseGroup(@Body request: Map<String, String>): Response<CourseGroup>
 
     /**
-     *  Duplicates an existing course into a specified course group.
-     * @param groupId The ID of the course group to duplicate the course into.
-     * @param courseId The ID of the course to duplicate.
-     * @param request A map containing any additional data for the duplication (e.g., new course name).
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Duplikuje istniejący kurs do określonej grupy kursów.
+     * @param groupId ID grupy kursów, do której ma zostać zduplikowany kurs.
+     * @param courseId ID kursu do zduplikowania.
+     * @param request Mapa zawierająca wszelkie dodatkowe dane do duplikacji (np. nowa nazwa kursu).
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @POST("/api/course-groups/course-groups/{groupId}/courses/{courseId}/duplicate")
     suspend fun duplicateCourse(
@@ -433,10 +432,10 @@ interface CourseApiService {
 
 
     /**
-     *  Verifies an access key for a specific course.
-     * @param courseId The ID of the course.
-     * @param request A map containing the access key.
-     * @return A map with the API response, typically indicating success or failure.
+     * Weryfikuje klucz dostępu dla określonego kursu.
+     * @param courseId ID kursu.
+     * @param request Mapa zawierająca klucz dostępu.
+     * @return Mapa z odpowiedzią API, zazwyczaj wskazującą na sukces lub porażkę.
      */
     @POST("/api/courses/{id}/verify-key")
     suspend fun verifyAccessKey(
@@ -445,17 +444,17 @@ interface CourseApiService {
     ): Map<String, Any>
 
     /**
-     *  Retrieves all files associated with a specific course.
-     * @param courseId The ID of the course.
-     * @return A list of CourseFile objects.
+     * Pobiera wszystkie pliki związane z określonym kursem.
+     * @param courseId ID kursu.
+     * @return Lista obiektów CourseFile.
      */
     @GET("/api/courses/{id}/files")
     suspend fun getCourseFiles(@Path("id") courseId: Long): List<CourseFile>
 
     /**
-     *  Retrieves users enrolled in a specific course.
-     * @param courseId The ID of the course.
-     * @return A CourseUsersResponse object containing the list of users.
+     * Pobiera użytkowników zapisanych na określony kurs.
+     * @param courseId ID kursu.
+     * @return Obiekt CourseUsersResponse.
      */
     @GET("/api/courses/{courseId}/users")
     suspend fun getCourseUsers(
@@ -463,10 +462,10 @@ interface CourseApiService {
     ): CourseUsersResponse
 
     /**
-     *  Removes a user from a specific course.
-     * @param courseId The ID of the course.
-     * @param userId The ID of the user to remove.
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Usuwa użytkownika z określonego kursu.
+     * @param courseId ID kursu.
+     * @param userId ID użytkownika do usunięcia.
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @DELETE("/api/courses/{courseId}/users/{userId}")
     suspend fun removeUserFromCourse(
@@ -475,18 +474,18 @@ interface CourseApiService {
     ): Response<GenericResponse>
 
     /**
-     *  Deletes a user from the system.
-     * @param userId The ID of the user to delete.
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Usuwa użytkownika z systemu.
+     * @param userId ID użytkownika do usunięcia.
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @DELETE("/api/courses/users/{userId}")
     suspend fun deleteUserFromSystem(@Path("userId") userId: Long): Response<GenericResponse>
 
     /**
-     *  Uploads a file to a specific course.
-     * @param courseId The ID of the course to upload the file to.
-     * @param file The MultipartBody.Part representing the file to upload.
-     * @return A Retrofit Response object containing a ResponseBody.
+     * Przesyła plik do określonego kursu.
+     * @param courseId ID kursu, do którego ma zostać przesłany plik.
+     * @param file MultipartBody.Part reprezentujący plik do przesłania.
+     * @return Obiekt Retrofit Response zawierający ResponseBody.
      */
     @Multipart
     @POST("/api/courses/{courseId}/files/upload")
@@ -496,10 +495,10 @@ interface CourseApiService {
     ): Response<ResponseBody>
 
     /**
-     *  Deletes a specific file from a course.
-     * @param courseId The ID of the course.
-     * @param fileId The ID of the file to delete.
-     * @return A Retrofit Response object containing a ResponseBody.
+     * Usuwa określony plik z kursu.
+     * @param courseId ID kursu.
+     * @param fileId ID pliku do usunięcia.
+     * @return Obiekt Retrofit Response zawierający ResponseBody.
      */
     @DELETE("/api/courses/{courseId}/files/{fileId}")
     suspend fun deleteCourseFile(
@@ -508,25 +507,25 @@ interface CourseApiService {
     ): Response<ResponseBody>
 
     /**
-     *  Retrieves courses associated with the authenticated user.
-     * @return A map with the API response, typically containing a list of courses.
+     * Pobiera kursy związane z uwierzytelnionym użytkownikiem.
+     * @return Mapa z odpowiedzią API, zazwyczaj zawierająca listę kursów.
      */
     @GET("/api/courses/my-courses")
     suspend fun getUserCourses(): Map<String, Any>
 
     /**
-     *  Retrieves all quizzes for a specific course.
-     * @param courseId The ID of the course.
-     * @return A QuizListResponse object.
+     * Pobiera wszystkie quizy dla określonego kursu.
+     * @param courseId ID kursu.
+     * @return Obiekt QuizListResponse.
      */
     @GET("/api/courses/{id}/quizzes")
     suspend fun getCourseQuizzes(@Path("id") courseId: Long): QuizListResponse
 
     /**
-     *  Creates a new quiz for a specific course.
-     * @param courseId The ID of the course to create the quiz for.
-     * @param quiz The Quiz object to create.
-     * @return A Retrofit Response object containing a QuizResponse.
+     * Tworzy nowy quiz dla określonego kursu.
+     * @param courseId ID kursu, dla którego ma zostać utworzony quiz.
+     * @param quiz Obiekt Quiz do utworzenia.
+     * @return Obiekt Retrofit Response zawierający QuizResponse.
      */
     @POST("/api/courses/{id}/quizzes")
     suspend fun createQuiz(
@@ -535,18 +534,18 @@ interface CourseApiService {
     ): Response<QuizResponse>
 
     /**
-     *  Retrieves a quiz for editing purposes.
-     * @param quizId The ID of the quiz to retrieve.
-     * @return A Retrofit Response object containing a QuizResponse.
+     * Pobiera quiz do celów edycji.
+     * @param quizId ID quizu do pobrania.
+     * @return Obiekt Retrofit Response zawierający QuizResponse.
      */
     @GET("/api/courses/quizzes/{quizId}/edit")
     suspend fun getQuizForEdit(@Path("quizId") quizId: Long): Response<QuizResponse>
 
     /**
-     *  Updates an existing quiz.
-     * @param quizId The ID of the quiz to update.
-     * @param quiz The updated Quiz object.
-     * @return A Retrofit Response object containing a QuizResponse.
+     * Aktualizuje istniejący quiz.
+     * @param quizId ID quizu do aktualizacji.
+     * @param quiz Zaktualizowany obiekt Quiz.
+     * @return Obiekt Retrofit Response zawierający QuizResponse.
      */
     @PUT("/api/courses/quizzes/{quizId}")
     suspend fun updateQuiz(
@@ -555,10 +554,10 @@ interface CourseApiService {
     ): Response<QuizResponse>
 
     /**
-     *  Creates a new question for a specific quiz.
-     * @param quizId The ID of the quiz to add the question to.
-     * @param question The QuizQuestion object to create.
-     * @return A Retrofit Response object containing a QuestionResponse.
+     * Tworzy nowe pytanie dla określonego quizu.
+     * @param quizId ID quizu, do którego ma zostać dodane pytanie.
+     * @param question Obiekt QuizQuestion do utworzenia.
+     * @return Obiekt Retrofit Response zawierający QuestionResponse.
      */
     @POST("/api/courses/quizzes/{quizId}/questions")
     suspend fun createQuizQuestion(
@@ -567,11 +566,11 @@ interface CourseApiService {
     ): Response<QuestionResponse>
 
     /**
-     *  Updates an existing quiz question.
-     * @param quizId The ID of the quiz the question belongs to.
-     * @param questionId The ID of the question to update.
-     * @param question The updated QuizQuestion object.
-     * @return A Retrofit Response object containing a QuestionResponse.
+     * Aktualizuje istniejące pytanie quizu.
+     * @param quizId ID quizu, do którego należy pytanie.
+     * @param questionId ID pytania do aktualizacji.
+     * @param question Zaktualizowany obiekt QuizQuestion.
+     * @return Obiekt Retrofit Response zawierający QuestionResponse.
      */
     @PUT("/api/courses/quizzes/{quizId}/questions/{questionId}")
     suspend fun updateQuizQuestion(
@@ -581,18 +580,18 @@ interface CourseApiService {
     ): Response<QuestionResponse>
 
     /**
-     *  Deletes a quiz by its ID.
-     * @param quizId The ID of the quiz to delete.
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Usuwa quiz o podanym ID.
+     * @param quizId ID quizu do usunięcia.
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @DELETE("/api/courses/quizzes/{quizId}")
     suspend fun deleteQuiz(@Path("quizId") quizId: Long): Response<GenericResponse>
 
     /**
-     *  Deletes a specific question from a quiz.
-     * @param quizId The ID of the quiz the question belongs to.
-     * @param questionId The ID of the question to delete.
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Usuwa określone pytanie z quizu.
+     * @param quizId ID quizu, do którego należy pytanie.
+     * @param questionId ID pytania do usunięcia.
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @DELETE("/api/courses/quizzes/{quizId}/questions/{questionId}")
     suspend fun deleteQuizQuestion(
@@ -601,18 +600,18 @@ interface CourseApiService {
     ): Response<GenericResponse>
 
     /**
-     *  Retrieves a quiz by its ID.
-     * @param quizId The ID of the quiz to retrieve.
-     * @return A Retrofit Response object containing a QuizResponse.
+     * Pobiera quiz o podanym ID.
+     * @param quizId ID quizu do pobrania.
+     * @return Obiekt Retrofit Response zawierający QuizResponse.
      */
     @GET("/api/courses/quizzes/{quizId}")
     suspend fun getQuiz(@Path("quizId") quizId: Long): Response<QuizResponse>
 
     /**
-     *  Submits answers for a quiz.
-     * @param quizId The ID of the quiz.
-     * @param answers A list of QuizAnswerDTO objects representing the submitted answers.
-     * @return A Retrofit Response object containing a SubmissionResultDTO.
+     * Wysyła odpowiedzi na quiz.
+     * @param quizId ID quizu.
+     * @param answers Lista obiektów QuizAnswerDTO reprezentujących przesłane odpowiedzi.
+     * @return Obiekt Retrofit Response zawierający SubmissionResultDTO.
      */
     @POST("/api/courses/quizzes/{quizId}/submit")
     suspend fun submitQuizAnswers(
@@ -621,64 +620,64 @@ interface CourseApiService {
     ): Response<SubmissionResultDTO>
 
     /**
-     *  Retrieves the result of a specific quiz attempt.
-     * @param quizId The ID of the quiz attempt.
-     * @return A Retrofit Response object containing a QuizResult.
+     * Pobiera wynik określonej próby quizu.
+     * @param quizId ID próby quizu.
+     * @return Obiekt Retrofit Response zawierający QuizResult.
      */
     @GET("/api/courses/quizzes/{quizId}/results")
     suspend fun getQuizResult(@Path("quizId") quizId: Long): Response<QuizResult>
 
     /**
-     *  Retrieves quiz statistics for a specific course.
-     * @param courseId The ID of the course.
-     * @return A Retrofit Response object containing a QuizStatsResponse.
+     * Pobiera statystyki quizu dla określonego kursu.
+     * @param courseId ID kursu.
+     * @return Obiekt Retrofit Response zawierający QuizStatsResponse.
      */
     @GET("/api/courses/{courseId}/quiz-stats")
     suspend fun getCourseQuizStats(@Path("courseId") courseId: Long): Response<QuizStatsResponse>
 
     /**
-     *  Retrieves detailed quiz results for a specific quiz.
-     * @param quizId The ID of the quiz.
-     * @return A Retrofit Response object containing a QuizDetailedResultsResponse.
+     * Pobiera szczegółowe wyniki quizu dla określonego quizu.
+     * @param quizId ID quizu.
+     * @return Obiekt Retrofit Response zawierający QuizDetailedResultsResponse.
      */
     @GET("/api/courses/quizzes/{quizId}/detailed-results")
     suspend fun getQuizDetailedResults(@Path("quizId") quizId: Long): Response<QuizDetailedResultsResponse>
 
     /**
-     *  Retrieves all users in the system.
-     * @return A UsersResponse object containing a list of all users.
+     * Pobiera wszystkich użytkowników w systemie.
+     * @return Obiekt UsersResponse zawierający listę wszystkich użytkowników.
      */
     @GET("/api/courses/users")
     suspend fun getAllUsers(): UsersResponse
 
     /**
-     *  Promotes a user to a teacher role.
-     * @param userId The ID of the user to promote.
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Promuje użytkownika do roli nauczyciela.
+     * @param userId ID użytkownika do awansowania.
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @POST("/api/courses/users/{userId}/promote-to-teacher")
     suspend fun promoteToTeacher(@Path("userId") userId: Long): Response<GenericResponse>
 
     /**
-     *  Demotes a user to a student role.
-     * @param userId The ID of the user to demote.
-     * @return A Retrofit Response object containing a GenericResponse.
+     * Degraduje użytkownika do roli studenta.
+     * @param userId ID użytkownika do degradacji.
+     * @return Obiekt Retrofit Response zawierający GenericResponse.
      */
     @POST("/api/courses/users/{userId}/demote-to-student")
     suspend fun demoteToStudent(@Path("userId") userId: Long): Response<GenericResponse>
 }
 
 /**
- *  Singleton object for providing a Retrofit client instance.
+ * Obiekt singletonowy do dostarczania instancji klienta Retrofit.
  */
 object RetrofitClient {
     private const val BASE_URL = "http://10.0.2.2:8080/"
 
     /**
-     *  Gets an instance of the CourseApiService.
-     * Configures OkHttpClient with an interceptor to add JWT token to requests.
-     * @param context The Android context, used for accessing SharedPreferences.
-     * @return An instance of CourseApiService.
+     * Pobiera instancję CourseApiService.
+     * Konfiguruje OkHttpClient z interceptorem dodającym token JWT do żądań.
+     * @param context Kontekst Androida, używany do dostępu do SharedPreferences.
+     * @return Instancja CourseApiService.
      */
     fun getInstance(context: Context): CourseApiService {
         val okHttpClient = OkHttpClient.Builder()
@@ -711,10 +710,26 @@ object RetrofitClient {
             .create(CourseApiService::class.java)
     }
 }
+/**
+ * Obiekt singletonowy [ServerConfig] odpowiada za zarządzanie konfiguracją adresu IP serwera
+ * w aplikacji Android. Umożliwia zapisywanie i odczytywanie adresu IP serwera za pomocą
+ * [SharedPreferences], a także konstruowanie pełnego bazowego adresu URL API.
+ * Dzięki temu aplikacja może dynamicznie łączyć się z różnymi instancjami backendu.
+ */
 object ServerConfig {
 
+    /**
+     * Nazwa pliku SharedPreferences, w którym będą przechowywane preferencje serwera.
+     */
     private const val PREFS_NAME = "server_prefs"
+    /**
+     * Klucz używany do przechowywania adresu IP serwera w SharedPreferences.
+     */
     private const val KEY_SERVER_IP = "server_ip"
+    /**
+     * Domyślny adres IP serwera, używany gdy nie znaleziono żadnego zapisanego adresu IP.
+     * Jest to standardowy adres dla emulatora Androida.
+     */
     private const val DEFAULT_SERVER_IP = "10.0.2.2" // Domyślne IP dla emulatora Androida
 
     /**

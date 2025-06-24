@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 /**
+ * @brief
  * Klasa encji reprezentująca plik przypisany do kursu.
  */
 @Entity

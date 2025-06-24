@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 /**
+ * @brief
  * Klasa encji reprezentująca odpowiedź użytkownika na pytanie w quizie.
  * Mapowana jest do tabeli "quiz_answers" w bazie danych.
  */

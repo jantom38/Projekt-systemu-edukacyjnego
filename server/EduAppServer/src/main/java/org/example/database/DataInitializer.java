@@ -11,7 +11,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
+/**
+ * @brief
+ * Klasa inicjalizująca domyślne dane w bazie danych
+ */
 @Component
 public class DataInitializer {
 

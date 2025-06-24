@@ -2,6 +2,7 @@ package com.example.myapplication.Quizy
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,17 +27,17 @@ import retrofit2.HttpException
 
 /**
  * @file EditQustionScreen.kt
- *  This file contains the composable function for editing individual quiz questions and its associated ViewModel.
+ * Ten plik zawiera funkcję kompozycyjną do edycji pojedynczych pytań quizu i związany z nią ViewModel.
  */
 
 /**
- *  ViewModel for the EditQuestionScreen.
+ * ViewModel dla EditQuestionScreen.
  *
- * This ViewModel handles fetching and updating a specific quiz question.
+ * Ten ViewModel obsługuje pobieranie i aktualizowanie konkretnego pytania quizu.
  *
- * @param context The application context.
- * @param quizId The ID of the quiz to which the question belongs.
- * @param questionId The ID of the question to be edited.
+ * @param context Kontekst aplikacji.
+ * @param quizId ID quizu, do którego należy pytanie.
+ * @param questionId ID pytania do edycji.
  */
 class EditQuestionViewModel(context: Context, private val quizId: Long, private val questionId: Long) : ViewModel() {
     private val _question = mutableStateOf<QuizQuestion?>(null)
@@ -55,17 +56,17 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
     }
 
     /**
-     *  Loads the details of a specific quiz question from the API.
+     * Ładuje szczegóły konkretnego pytania quizu z API.
      *
-     * It fetches the entire quiz first to find the specific question.
-     * Updates the [_question], [_isLoading], and [_error] states based on the API response.
+     * Najpierw pobiera cały quiz, aby znaleźć konkretne pytanie.
+     * Aktualizuje stany [_question], [_isLoading] i [_error] na podstawie odpowiedzi API.
      */
     fun loadQuestion() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                // Fetch the entire quiz to find the specific question
+                // Pobierz cały quiz, aby znaleźć konkretne pytanie
                 val response = apiService.getQuizForEdit(quizId)
                 if (response.isSuccessful && response.body()?.success == true) {
                     val quiz = response.body()?.quiz
@@ -87,10 +88,10 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
                     404 -> "Quiz lub pytanie nie znalezione"
                     else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("EditQuestionViewModel", "HTTP error", e)
+                Log.e("EditQuestionViewModel", "Błąd HTTP", e)
             } catch (e: Exception) {
                 _error.value = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("EditQuestionViewModel", "Network error", e)
+                Log.e("EditQuestionViewModel", "Błąd sieciowy", e)
             } finally {
                 _isLoading.value = false
             }
@@ -98,18 +99,18 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
     }
 
     /**
-     *  Updates an existing quiz question.
+     * Aktualizuje istniejące pytanie quizu.
      *
-     * @param question The [QuizQuestion] object with updated details.
-     * @param onSuccess Callback to be invoked when the question is successfully updated.
-     * @param onError Callback to be invoked when an error occurs during question update, providing an error message.
+     * @param question Obiekt [QuizQuestion] ze zaktualizowanymi szczegółami.
+     * @param onSuccess Callback, który zostanie wywołany po pomyślnym zaktualizowaniu pytania.
+     * @param onError Callback, który zostanie wywołany, gdy wystąpi błąd podczas aktualizacji pytania, dostarczając komunikat o błędzie.
      */
     fun updateQuestion(question: QuizQuestion, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
                 Log.d("EditQuestionViewModel", "Updating question ID: $questionId")
-                // Assuming you have an updateQuizQuestion endpoint in ApiService
-                // If not, you'll need to add it to ApiClient.kt and MainControllers.java
+                // Zakładając, że masz endpoint updateQuizQuestion w ApiService
+                // Jeśli nie, musisz dodać go do ApiClient.kt i MainControllers.java
                 val response = apiService.updateQuizQuestion(quizId, questionId, question)
                 if (response.isSuccessful && response.body()?.success == true) {
                     _question.value = response.body()?.question
@@ -124,14 +125,14 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
                 val errorMessage = when (e.code()) {
                     401 -> "Brak autoryzacji"
                     403 -> "Brak uprawnień do edycji pytania"
-                    404 -> "Pytanie nie znalezione"
+                    404 -> "Pytanie nie znaleziono"
                     else -> "Błąd serwera: ${e.code()}"
                 }
-                Log.e("EditQuestionViewModel", "HTTP error updating question ID: $questionId", e)
+                Log.e("EditQuestionViewModel", "Błąd HTTP podczas aktualizacji pytania ID: $questionId", e)
                 onError(errorMessage)
             } catch (e: Exception) {
                 val errorMessage = "Błąd połączenia: ${e.message ?: "Nieznany błąd"}"
-                Log.e("EditQuestionViewModel", "Network error updating question ID: $questionId", e)
+                Log.e("EditQuestionViewModel", "Błąd sieciowy podczas aktualizacji pytania ID: $questionId", e)
                 onError(errorMessage)
             }
         }
@@ -139,14 +140,14 @@ class EditQuestionViewModel(context: Context, private val quizId: Long, private 
 }
 
 /**
- *  Composable function for the Edit Question Screen.
+ * Funkcja kompozycyjna dla ekranu edycji pytania.
  *
- * This screen allows users to modify the details of a specific quiz question,
- * including its text, type, options (for multiple choice/true-false), and correct answer(s).
+ * Ten ekran umożliwia użytkownikom modyfikowanie szczegółów konkretnego pytania quizu,
+ * w tym jego tekstu, typu, opcji (dla pytań wielokrotnego wyboru/prawda-fałsz) i poprawnej odpowiedzi(-i).
  *
- * @param navController The NavHostController for navigating between screens.
- * @param quizId The ID of the quiz to which the question belongs.
- * @param questionId The ID of the question to be edited.
+ * @param navController NavHostController do nawigacji między ekranami.
+ * @param quizId ID quizu, do którego należy pytanie.
+ * @param questionId ID pytania do edycji.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -164,10 +165,10 @@ fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionI
     var questionType by remember { mutableStateOf("multiple_choice") }
     var correctAnswer by remember { mutableStateOf("") }
     var options by remember { mutableStateOf(mapOf<String, String>()) }
-    var expanded by remember { mutableStateOf(false) } // For question type dropdown
-    var tfExpanded by remember { mutableStateOf(false) } // For True/False dropdown
+    var expanded by remember { mutableStateOf(false) } // Dla rozwijanej listy typu pytania
+    var tfExpanded by remember { mutableStateOf(false) } // Dla rozwijanej listy Prawda/Fałsz
 
-    // List of question types for the dropdown
+    // Lista typów pytań dla rozwijanej listy
     val questionTypes = listOf(
         "multiple_choice" to "Wielokrotnego wyboru",
         "true_false" to "Prawda/Fałsz",
@@ -180,7 +181,7 @@ fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionI
             questionType = question.questionType
             correctAnswer = question.correctAnswer
             options = question.options ?: emptyMap()
-            // Special handling for true_false to ensure options are correctly set
+            // Specjalna obsługa dla true_false, aby upewnić się, że opcje są poprawnie ustawione
             if (question.questionType == "true_false" && options.isEmpty()) {
                 options = mapOf("True" to "Prawda", "False" to "Fałsz")
             }
@@ -275,7 +276,7 @@ fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionI
                                             text = { Text(type.second) },
                                             onClick = {
                                                 questionType = type.first
-                                                // Reset options and correct answer based on new type
+                                                // Zresetuj opcje i poprawną odpowiedź w zależności od nowego typu
                                                 when (questionType) {
                                                     "multiple_choice" -> {
                                                         options = mapOf("A" to "", "B" to "")
@@ -283,7 +284,7 @@ fun EditQuestionScreen(navController: NavHostController, quizId: Long, questionI
                                                     }
                                                     "true_false" -> {
                                                         options = mapOf("True" to "Prawda", "False" to "Fałsz")
-                                                        correctAnswer = "True" // Default for True/False
+                                                        correctAnswer = "True" // Domyślna dla Prawda/Fałsz
                                                     }
                                                     "open_ended" -> {
                                                         options = emptyMap()

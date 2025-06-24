@@ -24,19 +24,19 @@ import java.text.NumberFormat
 
 /**
  * @file QuizResultScreen.kt
- *  This file contains the composable function for displaying quiz results and its associated ViewModel.
+ * Ten plik zawiera funkcję kompozycyjną do wyświetlania wyników quizu i związany z nią ViewModel.
  */
 
 /**
- *  Composable function for the Quiz Result Screen.
+ * Funkcja kompozycyjna dla ekranu wyników quizu.
  *
- * This screen displays the user's performance on a completed quiz, including the score,
- * the number of correct answers, total questions, and a detailed breakdown of each question
- * with the correct answer and the user's selected answer.
+ * Ten ekran wyświetla wyniki użytkownika z ukończonego quizu, w tym wynik punktowy,
+ * liczbę poprawnych odpowiedzi, łączną liczbę pytań oraz szczegółowe zestawienie każdego pytania
+ * z poprawną odpowiedzią i odpowiedzią wybraną przez użytkownika.
  *
- * @param quizId The ID of the quiz for which to display results.
- * @param courseId The ID of the course to which the quiz belongs (not directly used in this screen's logic but passed for navigation context).
- * @param navController The NavHostController for navigating between screens.
+ * @param quizId ID quizu, dla którego mają być wyświetlone wyniki.
+ * @param courseId ID kursu, do którego należy quiz (nie jest bezpośrednio używane w logice tego ekranu, ale jest przekazywane w kontekście nawigacji).
+ * @param navController NavHostController do nawigacji między ekranami.
  */
 @Composable
 fun QuizResultScreen(
@@ -154,12 +154,12 @@ fun QuizResultScreen(
 }
 
 /**
- *  ViewModel for the QuizResultScreen.
+ * ViewModel dla QuizResultScreen.
  *
- * This ViewModel handles fetching the quiz results from the API.
+ * Ten ViewModel obsługuje pobieranie wyników quizu z API.
  *
- * @param context The application context.
- * @param quizId The ID of the quiz for which to fetch results.
+ * @param context Kontekst aplikacji.
+ * @param quizId ID quizu, dla którego mają być pobrane wyniki.
  */
 class QuizResultViewModel(context: Context, private val quizId: Long) : ViewModel() {
     private val apiService = RetrofitClient.getInstance(context)
@@ -178,9 +178,9 @@ class QuizResultViewModel(context: Context, private val quizId: Long) : ViewMode
     }
 
     /**
-     *  Loads the quiz results from the API.
+     * Ładuje wyniki quizu z API.
      *
-     * Updates the [_result], [_isLoading], and [_error] states based on the API response.
+     * Aktualizuje stany [_result], [_isLoading] i [_error] na podstawie odpowiedzi API.
      */
     fun loadResult() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -212,13 +212,13 @@ class QuizResultViewModel(context: Context, private val quizId: Long) : ViewMode
 }
 
 /**
- *  Data class representing the overall result of a quiz.
+ * Klasa danych reprezentująca ogólny wynik quizu.
  *
- * @param quizId The ID of the quiz.
- * @param correctAnswers The number of correctly answered questions.
- * @param totalQuestions The total number of questions in the quiz.
- * @param score The calculated score for the quiz.
- * @param questions A list of [QuestionResult] objects, providing details for each question.
+ * @param quizId ID quizu.
+ * @param correctAnswers Liczba poprawnie udzielonych odpowiedzi.
+ * @param totalQuestions Całkowita liczba pytań w quizie.
+ * @param score Obliczony wynik dla quizu.
+ * @param questions Lista obiektów [QuestionResult], zawierająca szczegóły dla każdego pytania.
  */
 data class QuizResult(
     val quizId: Long,
@@ -229,14 +229,14 @@ data class QuizResult(
 )
 
 /**
- *  Data class representing the result for a single question within a quiz.
+ * Klasa danych reprezentująca wynik dla pojedynczego pytania w quizie.
  *
- * @param questionId The ID of the question.
- * @param questionText The text of the question.
- * @param userAnswer The answer provided by the user for this question.
- * @param correctAnswer The correct answer(s) for this question.
- * @param isCorrect A boolean indicating whether the user's answer was correct.
- * @param explanation An optional explanation for the correct answer, if available.
+ * @param questionId ID pytania.
+ * @param questionText Tekst pytania.
+ * @param userAnswer Odpowiedź udzielona przez użytkownika na to pytanie.
+ * @param correctAnswer Poprawna odpowiedź(-i) na to pytanie.
+ * @param isCorrect Wartość logiczna wskazująca, czy odpowiedź użytkownika była poprawna.
+ * @param explanation Opcjonalne wyjaśnienie poprawnej odpowiedzi, jeśli jest dostępne.
  */
 data class QuestionResult(
     val questionId: Long,

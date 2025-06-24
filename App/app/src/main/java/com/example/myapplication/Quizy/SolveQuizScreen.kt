@@ -27,18 +27,18 @@ import kotlin.collections.get
 
 /**
  * @file SolveQuizScreen.kt
- *  This file contains the composable function for solving a quiz and its associated ViewModel.
+ * Ten plik zawiera funkcję kompozycyjną do rozwiązywania quizu oraz związany z nią ViewModel.
  */
 
 /**
- *  Composable function for the Solve Quiz Screen.
+ * Funkcja kompozycyjna dla ekranu rozwiązywania quizu.
  *
- * This screen allows users to take a quiz by displaying questions and collecting their answers.
- * Once completed, it navigates to the quiz result screen.
+ * Ten ekran umożliwia użytkownikom rozwiązywanie quizu poprzez wyświetlanie pytań i zbieranie ich odpowiedzi.
+ * Po zakończeniu, nawiguje do ekranu wyników quizu.
  *
- * @param navController The NavHostController for navigating between screens.
- * @param quizId The ID of the quiz to be solved.
- * @param courseId The ID of the course to which the quiz belongs.
+ * @param navController NavHostController do nawigacji między ekranami.
+ * @param quizId ID quizu do rozwiązania.
+ * @param courseId ID kursu, do którego należy quiz.
  */
 @Composable
 fun SolveQuizScreen(navController: NavHostController, quizId: Long, courseId: Long) {
@@ -117,13 +117,13 @@ fun SolveQuizScreen(navController: NavHostController, quizId: Long, courseId: Lo
 }
 
 /**
- *  ViewModel for the SolveQuizScreen.
+ * ViewModel dla SolveQuizScreen.
  *
- * This ViewModel manages the state of the quiz, including loading questions,
- * storing user's selected answers, and submitting the answers to the API.
+ * Ten ViewModel zarządza stanem quizu, w tym ładowaniem pytań,
+ * przechowywaniem wybranych odpowiedzi użytkownika i wysyłaniem odpowiedzi do API.
  *
- * @param context The application context.
- * @param quizId The ID of the quiz to be solved.
+ * @param context Kontekst aplikacji.
+ * @param quizId ID quizu do rozwiązania.
  */
 class SolveQuizViewModel(context: Context, private val quizId: Long) : ViewModel() {
     private val apiService = RetrofitClient.getInstance(context)
@@ -151,9 +151,9 @@ class SolveQuizViewModel(context: Context, private val quizId: Long) : ViewModel
     }
 
     /**
-     *  Loads the quiz details and its questions from the API.
+     * Ładuje szczegóły quizu i jego pytania z API.
      *
-     * Updates the [_quiz], [_questions], [_isLoading], [_error], and [_showSubmitButton] states.
+     * Aktualizuje stany [_quiz], [_questions], [_isLoading], [_error] i [_showSubmitButton].
      */
     fun loadQuiz() {
         viewModelScope.launch {
@@ -179,10 +179,10 @@ class SolveQuizViewModel(context: Context, private val quizId: Long) : ViewModel
     }
 
     /**
-     *  Updates the selected answers for a given question.
+     * Aktualizuje wybrane odpowiedzi dla danego pytania.
      *
-     * @param questionId The ID of the question.
-     * @param answers A list of strings representing the selected answers for the question.
+     * @param questionId ID pytania.
+     * @param answers Lista stringów reprezentujących wybrane odpowiedzi dla pytania.
      */
     fun onAnswerSelected(questionId: Long, answers: List<String>) {
         _selectedAnswers.value = _selectedAnswers.value.toMutableMap().apply {
@@ -191,10 +191,10 @@ class SolveQuizViewModel(context: Context, private val quizId: Long) : ViewModel
     }
 
     /**
-     *  Submits the user's answers to the API.
+     * Wysyła odpowiedzi użytkownika do API.
      *
-     * @return A [SubmissionResultDTO] object containing the result of the submission.
-     * @throws Exception if there is an error during submission.
+     * @return Obiekt [SubmissionResultDTO] zawierający wynik wysłania.
+     * @throws Exception jeśli wystąpi błąd podczas wysyłania.
      */
     suspend fun submitAnswers(): SubmissionResultDTO {
         return withContext(Dispatchers.IO) {
