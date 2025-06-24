@@ -6,7 +6,7 @@ Klient oraz serwer powinny znajdować się w tej samej sieci, lub server powinie
 Instrukcja uruchomienia:
 1. Uruchomić wiersz poleceń.
 2. przejść do ścieżki folderu (Projekt-systemu-edukacyjnego\server\EduAppServer\out\artifacts\EduAppServer_jar) w której znajduję się plik EduAppServer.jar za pomocą komendy cd {ścieżka do projektu\Projekt-systemu-edukacyjnego\server\EduAppServer\out\artifacts\EduAppServer_jar}
-3. wpisać polecenie java -jar EduAppServer-1.0.0.jar, poczekać chwilę na uruchomienie
+3. wpisać polecenie java -jar EduAppServer.jar, poczekać chwilę na uruchomienie
 4. Przenieść aplikację EduApp na smartfona, zainstalować oraz uruchomić w klasyczny sposób.
 5. na ekranie logowania obok napisu ,,logowanie" po prawej stronie mamy zębatkę, należy w nią kliknąć.
 6. wpisać w drugim wierszu poleceń windows polecenie ipconfig aby sprawdzić jakie komputer-serwer ma ip w sieci.
