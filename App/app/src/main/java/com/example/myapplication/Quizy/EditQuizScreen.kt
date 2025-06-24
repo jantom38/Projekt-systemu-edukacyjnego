@@ -321,13 +321,18 @@ fun EditQuizScreen(navController: NavHostController, quizId: Long) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(end = 8.dp)
+                                    ) {
                                         Text(
                                             text = question.questionText,
-                                            style = MaterialTheme.typography.titleMedium
+                                            style = MaterialTheme.typography.titleMedium,
+                                            maxLines = 3,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                         )
                                         Text(
                                             text = "Typ: ${question.questionType}",
@@ -361,6 +366,7 @@ fun EditQuizScreen(navController: NavHostController, quizId: Long) {
                                         )
                                     }
                                 }
+
                             }
                         }
                         item {

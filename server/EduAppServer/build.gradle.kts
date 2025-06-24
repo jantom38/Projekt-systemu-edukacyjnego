@@ -52,18 +52,14 @@ dependencies {
 
     // Testy
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.security:spring-security-test") // testy zabezpieczeń
+    testImplementation("org.springframework.security:spring-security-test") 
 }
 
 
 springBoot {
-    mainClass.set("org.example.Main") // ZMIEŃ NA PEŁNĄ NAZWĘ KLASY GŁÓWNEJ
+    mainClass.set("org.example.Main")
 }
 tasks.bootJar {
     duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
-    // Możesz również określić, które konkretnie pliki manifestu mają być wykluczone,
-    // ale EXCLUDE dla całego zadania bootJar jest często wystarczające.
-    // from(sourceSets.main.resources) {
-    //     exclude("META-INF/MANIFEST.MF")
-    // }
+
 }
