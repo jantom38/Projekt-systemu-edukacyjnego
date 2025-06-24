@@ -405,7 +405,7 @@ fun fetchAndOpenFile(context: Context, fileUrl: String, fileName: String) {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 val chooser = Intent.createChooser(viewIntent, "Wybierz aplikację do otwarcia")
-                if (viewIntent.resolveActivity(context.packageManager) != null) {
+                if (chooser.resolveActivity(context.packageManager) != null) {
                     context.startActivity(chooser)
                 } else {
                     Toast.makeText(context, "Brak aplikacji do otwarcia pliku", Toast.LENGTH_SHORT).show()
